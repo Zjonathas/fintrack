@@ -12,6 +12,8 @@ import {
 import { Categoria, TransacaoCreatePayload } from '../types';
 import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
+import { NumberInput } from './NumberInput';
+import { Select } from './Select';
 
 interface FormularioTransacaoProps {
   categorias: Categoria[];
@@ -164,15 +166,14 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
               <CurrencyDollar size={13} weight="bold" />
               <span>Valor (R$)</span>
             </label>
-            <input
+            <NumberInput
               id="valor-produto"
-              type="number"
-              step="0.01"
-              min="0.01"
+              step={1}
+              min={0}
               required
               placeholder="0,00"
               value={valorProduto}
-              onChange={(e) => setValorProduto(e.target.value)}
+              onChange={(val) => setValorProduto(val)}
               className={inputClass}
             />
           </div>
@@ -229,22 +230,12 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
             </div>
           )}
 
-          <select
-            id="categoria"
-            required
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value === '' ? '' : Number(e.target.value))}
-            className={inputClass}
-          >
-            <option value="" disabled>
-              Selecione uma categoria...
-            </option>
-            {categorias.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nome}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={categoriaId !== '' ? String(categoriaId) : ''}
+            onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+            placeholder="Selecione uma categoria..."
+            options={categorias.map((cat) => ({ value: String(cat.id), label: cat.nome }))}
+          />
         </div>
 
         {/* Checkbox de Frete / Taxa de Entrega */}
@@ -286,15 +277,13 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
               <Truck size={13} weight="bold" />
               <span>Valor do Frete (R$)</span>
             </label>
-            <input
+            <NumberInput
               id="valor-entrega"
-              type="number"
-              step="0.01"
-              min="0"
-              required={teveEntrega}
+              step={1}
+              min={0}
               placeholder="Ex: 8,90"
               value={valorEntrega}
-              onChange={(e) => setValorEntrega(e.target.value)}
+              onChange={(val) => setValorEntrega(val)}
               className="w-full px-3 py-2 text-sm bg-background border border-warning/40 rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-warning/50"
             />
             <p className="text-[11px] text-muted-foreground">
