@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 0 0% 99%;
     --foreground: 240 10% 4%;
     --card: 0 0% 100%;
@@ -29,6 +30,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 240 10% 4%;
     --foreground: 0 0% 98%;
     --card: 240 10% 6.5%;
@@ -104,10 +106,23 @@
     -webkit-appearance: none;
     margin: 0;
   }
-  input[type='number'] {
-    -moz-appearance: textfield;
-    appearance: textfield;
+  /* Melhora a interação com inputs de data */
+  input[type='date'] {
+    cursor: pointer;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  .dark input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(0.9);
   }
 }
+
 
 
