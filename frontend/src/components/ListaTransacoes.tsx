@@ -108,9 +108,9 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
 
       {/* Barra de Ações em Lote (Contextual) */}
       {selecionados.length > 0 && (
-        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-150">
+        <div className="bg-primary/10 border-b border-primary/20 px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 animate-in fade-in duration-150">
           <div className="flex items-center gap-2">
-            <CheckSquare size={17} weight="fill" className="text-primary" />
+            <CheckSquare size={17} weight="fill" className="text-primary shrink-0" />
             <span className="text-xs font-semibold text-primary">
               {selecionados.length}{' '}
               {selecionados.length === 1 ? 'registro selecionado' : 'registros selecionados'}
@@ -124,7 +124,7 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
           </div>
           <button
             onClick={handleExcluirLote}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all shadow-xs cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all shadow-xs cursor-pointer w-full sm:w-auto"
           >
             <TrashSimple size={14} weight="bold" />
             <span>Excluir selecionados ({selecionados.length})</span>
@@ -134,7 +134,7 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
 
       {/* Tabela de Transações */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-sm min-w-[620px]">
           <thead className="bg-muted/50 text-xs text-muted-foreground font-medium border-b border-border">
             <tr>
               <th scope="col" className="py-2.5 px-3 w-10 text-center">

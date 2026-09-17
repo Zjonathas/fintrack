@@ -6,16 +6,17 @@ import {
   WifiHigh,
   WifiSlash,
   Tag,
+  Plus,
 } from '@phosphor-icons/react';
 import { Categoria, FiltrosTransacao, ResumoAnalitico, Transacao } from './types';
 import { apiService } from './services/api';
 import { DashboardResumo } from './components/DashboardResumo';
 import { FiltrosTransacoes } from './components/FiltrosTransacoes';
-import { FormularioTransacao } from './components/FormularioTransacao';
 import { ListaTransacoes } from './components/ListaTransacoes';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ModalCategoria } from './components/ModalCategoria';
 import { ModalEditarTransacao } from './components/ModalEditarTransacao';
+import { ModalNovaTransacao } from './components/ModalNovaTransacao';
 import { useTheme } from './hooks/useTheme';
 
 const FILTROS_INICIAIS: FiltrosTransacao = {
@@ -38,6 +39,7 @@ export function App() {
   const [filtros, setFiltros] = useState<FiltrosTransacao>(FILTROS_INICIAIS);
 
   const [modalCategoriaAberto, setModalCategoriaAberto] = useState(false);
+  const [modalNovaTransacaoAberto, setModalNovaTransacaoAberto] = useState(false);
   const [transacaoEmEdicao, setTransacaoEmEdicao] = useState<Transacao | null>(null);
   const [modalEditarAberto, setModalEditarAberto] = useState(false);
 
@@ -128,27 +130,27 @@ export function App() {
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
       {/* Header com identidade e alternador de tema */}
       <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-md border-b border-border shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-              <Wallet size={20} weight="duotone" />
+              <Wallet size={18} weight="duotone" className="sm:w-5 sm:h-5" />
             </div>
-            <h1 className="font-semibold text-base text-foreground tracking-tight">FinançasApp</h1>
+            <h1 className="font-semibold text-sm sm:text-base text-foreground tracking-tight">FinançasApp</h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Status da API */}
-            <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* Status da API (discreto no mobile) */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs">
               {apiOnline === true && (
                 <span className="flex items-center gap-1 text-primary font-medium">
                   <WifiHigh size={15} weight="bold" />
-                  <span className="hidden sm:inline">Online</span>
+                  <span>Online</span>
                 </span>
               )}
               {apiOnline === false && (
                 <span className="flex items-center gap-1 text-destructive font-medium">
                   <WifiSlash size={15} weight="bold" />
-                  <span className="hidden sm:inline">Offline</span>
+                  <span>Offline</span>
                 </span>
               )}
               {apiOnline === null && (
@@ -156,13 +158,24 @@ export function App() {
               )}
             </div>
 
-            <div className="h-4 w-[1px] bg-border" />
+            <div className="hidden sm:block h-4 w-[1px] bg-border" />
+
+            {/* Botão para abrir modal de Nova Transação */}
+            <button
+              onClick={() => setModalNovaTransacaoAberto(true)}
+              title="Cadastrar nova transação"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
+            >
+              <Plus size={15} weight="bold" />
+              <span className="hidden sm:inline">Nova Transação</span>
+              <span className="inline sm:hidden">Nova</span>
+            </button>
 
             {/* Botão para gerenciar / cadastrar categorias */}
             <button
               onClick={() => setModalCategoriaAberto(true)}
               title="Gerenciar e cadastrar categorias"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent border border-border text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent border border-border text-xs font-medium transition-all cursor-pointer shrink-0"
             >
               <Tag size={15} weight="duotone" className="text-primary" />
               <span className="hidden sm:inline">Categorias</span>
@@ -173,7 +186,7 @@ export function App() {
               onClick={toggleTheme}
               title={isDark ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
               aria-label="Alternar tema"
-              className="p-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent border border-border transition-all duration-150 flex items-center justify-center cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent border border-border transition-all duration-150 flex items-center justify-center cursor-pointer shrink-0"
             >
               {isDark ? (
                 <Sun size={17} weight="duotone" className="text-warning" />
@@ -190,6 +203,15 @@ export function App() {
         isOpen={modalCategoriaAberto}
         onClose={() => setModalCategoriaAberto(false)}
         categorias={categorias}
+        onCategoriaCriada={handleCategoriaCriada}
+      />
+
+      {/* Modal de Cadastro de Nova Transação */}
+      <ModalNovaTransacao
+        isOpen={modalNovaTransacaoAberto}
+        onClose={() => setModalNovaTransacaoAberto(false)}
+        categorias={categorias}
+        onTransacaoCriada={handleTransacaoCriada}
         onCategoriaCriada={handleCategoriaCriada}
       />
 
@@ -220,33 +242,40 @@ export function App() {
           </ErrorBoundary>
         </section>
 
-        {/* Formulário + Tabela de Transações com Filtros */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-4 lg:sticky lg:top-20">
-            <FormularioTransacao
-              categorias={categorias}
-              onTransacaoCriada={handleTransacaoCriada}
-              onCategoriaCriada={handleCategoriaCriada}
-            />
+        {/* Seção do Extrato e Filtros em Largura Total */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border shadow-2xs">
+            <div>
+              <h2 className="text-sm sm:text-base font-semibold text-foreground">Extrato & Filtros</h2>
+              <p className="text-xs text-muted-foreground">
+                Consulte, filtre por data ou categoria, edite ou exclua despesas em lote
+              </p>
+            </div>
+            <button
+              onClick={() => setModalNovaTransacaoAberto(true)}
+              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+            >
+              <Plus size={16} weight="bold" />
+              <span>Cadastrar Nova Despesa</span>
+            </button>
           </div>
 
-          <div className="lg:col-span-8 space-y-4">
-            <FiltrosTransacoes
-              filtros={filtros}
-              categorias={categorias}
-              totalEncontrados={transacoes.length}
-              onFiltroChange={setFiltros}
-              onLimparFiltros={() => setFiltros(FILTROS_INICIAIS)}
-            />
-            <ListaTransacoes
-              transacoes={transacoes}
-              loading={loadingDados}
-              onExcluir={handleExcluir}
-              onExcluirEmLote={handleExcluirEmLote}
-              onEditar={handleEditar}
-            />
-          </div>
+          <FiltrosTransacoes
+            filtros={filtros}
+            categorias={categorias}
+            totalEncontrados={transacoes.length}
+            onFiltroChange={setFiltros}
+            onLimparFiltros={() => setFiltros(FILTROS_INICIAIS)}
+          />
+          <ListaTransacoes
+            transacoes={transacoes}
+            loading={loadingDados}
+            onExcluir={handleExcluir}
+            onExcluirEmLote={handleExcluirEmLote}
+            onEditar={handleEditar}
+          />
         </section>
+
       </main>
 
       {/* Footer */}

@@ -109,6 +109,25 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
     return Array.from(mapaDias.values());
   }, [transacoes]);
 
+  // Dados para o gráfico Donut de Categorias (garante valores numéricos válidos)
+  const dadosPizza = useMemo(() => {
+    return (resumo?.gastos_por_categoria || []).map((cat, i) => ({
+      name: cat.categoria_nome,
+      value: Number(cat.total_geral) || 0,
+      color: PALETTE[i % PALETTE.length],
+    }));
+  }, [resumo?.gastos_por_categoria]);
+
+  // Dados para o gráfico de Barras Comparativas (Produto vs Frete)
+  const dadosBarras = useMemo(() => {
+    return (resumo?.gastos_por_categoria || []).map((cat) => ({
+      categoria: cat.categoria_nome,
+      Produtos: Number(cat.total_produto) || 0,
+      Frete: Number(cat.total_entrega) || 0,
+      Total: Number(cat.total_geral) || 0,
+    }));
+  }, [resumo?.gastos_por_categoria]);
+
   if (!resumo) {
     return (
       <div className="card p-8 text-center space-y-3">
@@ -162,25 +181,6 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       border: 'border-border',
     },
   ];
-
-  // Dados para o gráfico Donut de Categorias (garante valores numéricos válidos)
-  const dadosPizza = useMemo(() => {
-    return (gastos_por_categoria || []).map((cat, i) => ({
-      name: cat.categoria_nome,
-      value: Number(cat.total_geral) || 0,
-      color: PALETTE[i % PALETTE.length],
-    }));
-  }, [gastos_por_categoria]);
-
-  // Dados para o gráfico de Barras Comparativas (Produto vs Frete)
-  const dadosBarras = useMemo(() => {
-    return (gastos_por_categoria || []).map((cat) => ({
-      categoria: cat.categoria_nome,
-      Produtos: Number(cat.total_produto) || 0,
-      Frete: Number(cat.total_entrega) || 0,
-      Total: Number(cat.total_geral) || 0,
-    }));
-  }, [gastos_por_categoria]);
 
   return (
     <div className="space-y-6">
