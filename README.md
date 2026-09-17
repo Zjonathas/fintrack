@@ -139,6 +139,9 @@ A documentação interativa completa (OpenAPI / Swagger) é gerada automaticamen
 - `POST /api/categorias` &mdash; Criar nova categoria
 - `GET /api/transacoes` &mdash; Listar e filtrar transações (mês, ano, busca)
 - `POST /api/transacoes` &mdash; Cadastrar transação com cálculo condicional de frete
-- `DELETE /api/transacoes/{id}` &mdash; Remover uma transação
+- `PUT /api/transacoes/{id}` &mdash; Atualizar uma transação existente
+- `DELETE /api/transacoes/{id}` &mdash; Remover uma transação individualmente
+- `POST /api/transacoes/bulk-delete` &mdash; Excluir múltiplas transações selecionadas em lote
 - `GET /api/dashboard/resumo` &mdash; Obter KPIs agregados (total, produtos, fretes, % frete)
+
 - `GET /api/dashboard/graficos` &mdash; Obter séries formatadas para os gráficos Recharts

@@ -117,6 +117,39 @@ def delete_transacao(db: Session, transacao_id: int) -> bool:
     return True
 
 
+def update_transacao(
+    db: Session,
+    transacao_id: int,
+    transacao: schemas.TransacaoUpdate
+) -> Optional[models.Transacao]:
+    """Atualiza os dados de uma transação existente."""
+    db_transacao = db.query(models.Transacao).filter(models.Transacao.id == transacao_id).first()
+    if not db_transacao:
+        return None
+
+    db_transacao.descricao = transacao.descricao.strip()
+    db_transacao.valor_produto = round(transacao.valor_produto, 2)
+    db_transacao.teve_entrega = transacao.teve_entrega
+    db_transacao.valor_entrega = round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0
+    db_transacao.data = transacao.data
+    db_transacao.categoria_id = transacao.categoria_id
+
+    db.commit()
+    db.refresh(db_transacao)
+    db.refresh(db_transacao, ["categoria"])
+    return db_transacao
+
+
+def delete_transacoes_bulk(db: Session, ids: List[int]) -> int:
+    """Exclui múltiplos registros de transações em lote atomicamente."""
+    if not ids:
+        return 0
+    qtd = db.query(models.Transacao).filter(models.Transacao.id.in_(ids)).delete(synchronize_session=False)
+    db.commit()
+    return qtd
+
+
+
 # ==========================================
 # Resumo Analítico e Dashboard
 # ==========================================

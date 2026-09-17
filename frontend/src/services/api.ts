@@ -5,6 +5,8 @@ import {
   ResumoAnalitico,
   Transacao,
   TransacaoCreatePayload,
+  TransacaoUpdatePayload,
+  BulkDeleteResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -62,6 +64,16 @@ export const apiService = {
 
   async deletarTransacao(id: number): Promise<void> {
     await api.delete(`/transacoes/${id}`);
+  },
+
+  async atualizarTransacao(id: number, payload: TransacaoUpdatePayload): Promise<Transacao> {
+    const response = await api.put<Transacao>(`/transacoes/${id}`, payload);
+    return response.data;
+  },
+
+  async deletarTransacoesEmLote(ids: number[]): Promise<BulkDeleteResponse> {
+    const response = await api.post<BulkDeleteResponse>('/transacoes/bulk-delete', { ids });
+    return response.data;
   },
 
   // Dashboard & Métricas

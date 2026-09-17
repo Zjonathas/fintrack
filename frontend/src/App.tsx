@@ -15,6 +15,7 @@ import { FormularioTransacao } from './components/FormularioTransacao';
 import { ListaTransacoes } from './components/ListaTransacoes';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ModalCategoria } from './components/ModalCategoria';
+import { ModalEditarTransacao } from './components/ModalEditarTransacao';
 import { useTheme } from './hooks/useTheme';
 
 const FILTROS_INICIAIS: FiltrosTransacao = {
@@ -37,6 +38,8 @@ export function App() {
   const [filtros, setFiltros] = useState<FiltrosTransacao>(FILTROS_INICIAIS);
 
   const [modalCategoriaAberto, setModalCategoriaAberto] = useState(false);
+  const [transacaoEmEdicao, setTransacaoEmEdicao] = useState<Transacao | null>(null);
+  const [modalEditarAberto, setModalEditarAberto] = useState(false);
 
   const carregarCategorias = useCallback(async () => {
     try {
@@ -99,6 +102,26 @@ export function App() {
     } catch {
       alert('Não foi possível excluir a transação.');
     }
+  };
+
+  const handleExcluirEmLote = async (ids: number[]) => {
+    try {
+      await apiService.deletarTransacoesEmLote(ids);
+      carregarTransacoes();
+      carregarResumo();
+    } catch {
+      alert('Não foi possível excluir as transações selecionadas.');
+    }
+  };
+
+  const handleEditar = (t: Transacao) => {
+    setTransacaoEmEdicao(t);
+    setModalEditarAberto(true);
+  };
+
+  const handleTransacaoAtualizada = () => {
+    carregarTransacoes();
+    carregarResumo();
   };
 
   return (
@@ -170,6 +193,18 @@ export function App() {
         onCategoriaCriada={handleCategoriaCriada}
       />
 
+      {/* Modal de Edição de Transações */}
+      <ModalEditarTransacao
+        isOpen={modalEditarAberto}
+        transacao={transacaoEmEdicao}
+        categorias={categorias}
+        onClose={() => {
+          setModalEditarAberto(false);
+          setTransacaoEmEdicao(null);
+        }}
+        onTransacaoAtualizada={handleTransacaoAtualizada}
+      />
+
       {/* Main Content */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Dashboard com KPIs e Gráficos Interativos */}
@@ -207,6 +242,8 @@ export function App() {
               transacoes={transacoes}
               loading={loadingDados}
               onExcluir={handleExcluir}
+              onExcluirEmLote={handleExcluirEmLote}
+              onEditar={handleEditar}
             />
           </div>
         </section>

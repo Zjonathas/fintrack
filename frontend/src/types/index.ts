@@ -24,6 +24,18 @@ export interface TransacaoCreatePayload {
   categoria_id: number;
 }
 
+export type TransacaoUpdatePayload = TransacaoCreatePayload;
+
+export interface BulkDeletePayload {
+  ids: number[];
+}
+
+export interface BulkDeleteResponse {
+  excluidos: number;
+  mensagem: string;
+}
+
+
 export interface GastoPorCategoria {
   categoria_id: number;
   categoria_nome: string;

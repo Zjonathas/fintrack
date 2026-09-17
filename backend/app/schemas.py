@@ -47,6 +47,21 @@ class TransacaoCreate(TransacaoBase):
         return self
 
 
+class TransacaoUpdate(TransacaoCreate):
+    """Schema para atualização completa de uma transação existente."""
+    pass
+
+
+class TransacaoBulkDeleteRequest(BaseModel):
+    ids: List[int] = Field(..., min_length=1, description="Lista de IDs das transações a serem removidas em lote")
+
+
+class TransacaoBulkDeleteResponse(BaseModel):
+    excluidos: int = Field(..., description="Quantidade total de transações excluídas com sucesso")
+    mensagem: str = Field(..., description="Mensagem de confirmação da operação")
+
+
+
 class TransacaoResponse(BaseModel):
     id: int
     descricao: str

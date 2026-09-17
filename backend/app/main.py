@@ -158,6 +158,57 @@ def remover_transacao(
     return None
 
 
+@app.put(
+    "/api/transacoes/{transacao_id}",
+    response_model=schemas.TransacaoResponse,
+    tags=["Transações"],
+    summary="Atualizar transação financeira existente"
+)
+def atualizar_transacao(
+    transacao_id: int,
+    transacao: schemas.TransacaoUpdate,
+    db: Session = Depends(get_db)
+):
+    # Valida se a categoria informada existe
+    cat = crud.get_categoria_by_id(db=db, categoria_id=transacao.categoria_id)
+    if not cat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
+        )
+    atualizado = crud.update_transacao(db=db, transacao_id=transacao_id, transacao=transacao)
+    if not atualizado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Transação com ID {transacao_id} não encontrada."
+        )
+    return atualizado
+
+
+@app.post(
+    "/api/transacoes/bulk-delete",
+    response_model=schemas.TransacaoBulkDeleteResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Transações"],
+    summary="Excluir múltiplas transações em lote"
+)
+def remover_transacoes_em_lote(
+    payload: schemas.TransacaoBulkDeleteRequest,
+    db: Session = Depends(get_db)
+):
+    if not payload.ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nenhum ID informado para exclusão em lote."
+        )
+    qtd = crud.delete_transacoes_bulk(db=db, ids=payload.ids)
+    return {
+        "excluidos": qtd,
+        "mensagem": f"{qtd} transação(ões) excluída(s) com sucesso."
+    }
+
+
+
 # ==========================================
 # Endpoints do Dashboard e Resumo
 # ==========================================
