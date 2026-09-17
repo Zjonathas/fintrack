@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Controle de gastos pessoais com rastreamento isolado de taxas de entrega e gráficos interativos" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Finanças — Controle de Gastos</title>
+    <script>
+      (function () {
+        try {
+          const theme = localStorage.getItem('financas_theme');
+          if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (window.matchMedia && !window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body class="min-h-screen font-sans antialiased bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
