@@ -8,6 +8,7 @@ import {
   CalendarBlank,
 } from '@phosphor-icons/react';
 import { Categoria, FiltrosTransacao } from '../types';
+import { Select } from './Select';
 
 interface FiltrosTransacoesProps {
   filtros: FiltrosTransacao;
@@ -75,24 +76,21 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
             <Tag size={13} weight="bold" />
             <span>Categoria</span>
           </label>
-          <select
+          <Select
             id="filtro-categoria"
             value={filtros.categoria_id ?? ''}
-            onChange={(e) =>
+            onChange={(val) =>
               onFiltroChange({
                 ...filtros,
-                categoria_id: e.target.value === '' ? '' : Number(e.target.value),
+                categoria_id: val === '' ? '' : Number(val),
               })
             }
-            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-          >
-            <option value="">Todas as categorias</option>
-            {categorias.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nome}
-              </option>
-            ))}
-          </select>
+            placeholder="Todas as categorias"
+            options={[
+              { value: '', label: 'Todas as categorias' },
+              ...categorias.map((cat) => ({ value: cat.id, label: cat.nome })),
+            ]}
+          />
         </div>
 
         {/* Entrega */}
@@ -101,26 +99,26 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
             <Truck size={13} weight="bold" />
             <span>Taxa de Entrega</span>
           </label>
-          <select
+          <Select
             id="filtro-entrega"
             value={
               filtros.teve_entrega === '' || filtros.teve_entrega === undefined
                 ? ''
                 : String(filtros.teve_entrega)
             }
-            onChange={(e) => {
-              const val = e.target.value;
+            onChange={(val) => {
               onFiltroChange({
                 ...filtros,
                 teve_entrega: val === '' ? '' : val === 'true',
               });
             }}
-            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-          >
-            <option value="">Todos os status</option>
-            <option value="true">Apenas c/ taxa de entrega</option>
-            <option value="false">Apenas s/ taxa de entrega</option>
-          </select>
+            placeholder="Todos os status"
+            options={[
+              { value: '', label: 'Todos os status' },
+              { value: 'true', label: 'Apenas c/ taxa de entrega' },
+              { value: 'false', label: 'Apenas s/ taxa de entrega' },
+            ]}
+          />
         </div>
 
         {/* Data */}

@@ -163,13 +163,16 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
               return (
                 <tr
                   key={t.id}
-                  className={`transition-colors ${
+                  className={`transition-all duration-150 ${
                     estaSelecionado
-                      ? 'bg-primary/5 dark:bg-primary/10 hover:bg-primary/10 dark:hover:bg-primary/15'
+                      ? 'bg-primary/10 dark:bg-primary/15 hover:bg-primary/15 dark:hover:bg-primary/20'
                       : 'hover:bg-muted/30'
                   }`}
                 >
-                  <td className="py-3 px-3 text-center">
+                  <td className="py-3 px-3 text-center relative">
+                    {estaSelecionado && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r" />
+                    )}
                     <div className="flex items-center justify-center">
                       <Checkbox
                         checked={estaSelecionado}

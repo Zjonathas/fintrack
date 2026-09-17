@@ -12,6 +12,7 @@ import {
 import { Categoria, Transacao, TransacaoUpdatePayload } from '../types';
 import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
+import { Select } from './Select';
 
 interface ModalEditarTransacaoProps {
   isOpen: boolean;
@@ -201,19 +202,16 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
                 <Tag size={14} className="text-primary" />
                 Categoria <span className="text-destructive">*</span>
               </label>
-              <select
+              <Select
+                id="modal-editar-categoria"
                 value={categoriaId}
-                onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : '')}
-                className={inputClass}
-                required
-              >
-                <option value="">Selecione uma categoria...</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+                placeholder="Selecione uma categoria..."
+                options={categorias.map((c) => ({
+                  value: c.id,
+                  label: c.nome,
+                }))}
+              />
             </div>
           </div>
 

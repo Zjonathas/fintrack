@@ -13,6 +13,7 @@ import {
 import { Categoria, TransacaoCreatePayload } from '../types';
 import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
+import { Select } from './Select';
 
 interface ModalNovaTransacaoProps {
   isOpen: boolean;
@@ -276,22 +277,16 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
               </div>
             )}
 
-            <select
+            <Select
               id="modal-nova-categoria"
-              required
               value={categoriaId}
-              onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : '')}
-              className={inputClass}
-            >
-              <option value="" disabled>
-                Selecione uma categoria...
-              </option>
-              {categorias.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nome}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+              placeholder="Selecione uma categoria..."
+              options={categorias.map((cat) => ({
+                value: cat.id,
+                label: cat.nome,
+              }))}
+            />
           </div>
 
           {/* Checkbox de Frete / Taxa de Entrega */}
