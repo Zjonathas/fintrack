@@ -15,6 +15,7 @@ import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
 import { Select } from './Select';
 import { NumberInput } from './NumberInput';
+import { DatePicker } from './DatePicker';
 
 interface ModalNovaTransacaoProps {
   isOpen: boolean;
@@ -229,13 +230,11 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                 <CalendarBlank size={14} className="text-primary" />
                 Data <span className="text-destructive">*</span>
               </label>
-              <input
+              <DatePicker
                 id="modal-nova-data"
-                type="date"
                 required
                 value={data}
-                onChange={(e) => setData(e.target.value)}
-                className={inputClass}
+                onChange={(val) => setData(val)}
               />
             </div>
           </div>

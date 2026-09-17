@@ -14,6 +14,7 @@ import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
 import { NumberInput } from './NumberInput';
 import { Select } from './Select';
+import { DatePicker } from './DatePicker';
 
 interface FormularioTransacaoProps {
   categorias: Categoria[];
@@ -182,13 +183,11 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
               <CalendarBlank size={13} weight="bold" />
               <span>Data</span>
             </label>
-            <input
+            <DatePicker
               id="data"
-              type="date"
               required
               value={data}
-              onChange={(e) => setData(e.target.value)}
-              className={inputClass}
+              onChange={(val) => setData(val)}
             />
           </div>
         </div>

@@ -14,6 +14,7 @@ import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
 import { Select } from './Select';
 import { NumberInput } from './NumberInput';
+import { DatePicker } from './DatePicker';
 
 interface ModalEditarTransacaoProps {
   isOpen: boolean;
@@ -222,11 +223,10 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
               <CalendarBlank size={14} className="text-primary" />
               Data da Despesa <span className="text-destructive">*</span>
             </label>
-            <input
-              type="date"
+            <DatePicker
+              id="modal-editar-data"
               value={data}
-              onChange={(e) => setData(e.target.value)}
-              className={inputClass}
+              onChange={(val) => setData(val)}
               required
             />
           </div>

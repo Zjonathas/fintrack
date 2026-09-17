@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { Categoria, FiltrosTransacao } from '../types';
 import { Select } from './Select';
+import { DatePicker } from './DatePicker';
 
 interface FiltrosTransacoesProps {
   filtros: FiltrosTransacao;
@@ -127,12 +128,11 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
             <CalendarBlank size={13} weight="bold" />
             <span>A partir de</span>
           </label>
-          <input
+          <DatePicker
             id="filtro-data"
-            type="date"
+            placeholder="Qualquer data"
             value={filtros.data_inicio || ''}
-            onChange={(e) => onFiltroChange({ ...filtros, data_inicio: e.target.value })}
-            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+            onChange={(val) => onFiltroChange({ ...filtros, data_inicio: val })}
           />
         </div>
       </div>
