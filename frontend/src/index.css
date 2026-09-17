@@ -97,5 +97,17 @@
     padding-right: 2.25rem;
     appearance: none;
   }
+
+  /* Remove o bloco branco e setas nativas desalinhadas do Webkit */
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
+
 

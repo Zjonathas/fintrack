@@ -14,6 +14,7 @@ import { Categoria, TransacaoCreatePayload } from '../types';
 import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
 import { Select } from './Select';
+import { NumberInput } from './NumberInput';
 
 interface ModalNovaTransacaoProps {
   isOpen: boolean;
@@ -211,15 +212,14 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                 <CurrencyDollar size={14} className="text-primary" />
                 Valor do Produto (R$) <span className="text-destructive">*</span>
               </label>
-              <input
+              <NumberInput
                 id="modal-nova-valor"
-                type="number"
-                step="0.01"
-                min="0.01"
+                step={1}
+                min={0}
                 required
                 placeholder="0,00"
                 value={valorProduto}
-                onChange={(e) => setValorProduto(e.target.value)}
+                onChange={(val) => setValorProduto(val)}
                 className={inputClass}
               />
             </div>
@@ -327,14 +327,13 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                   <CurrencyDollar size={14} className="text-warning" />
                   Valor da Entrega / Frete (R$)
                 </label>
-                <input
+                <NumberInput
                   id="modal-nova-valor-entrega"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
+                  step={1}
+                  min={0}
                   placeholder="0,00"
                   value={valorEntrega}
-                  onChange={(e) => setValorEntrega(e.target.value)}
+                  onChange={(val) => setValorEntrega(val)}
                   className={inputClass}
                   autoFocus
                 />
