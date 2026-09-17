@@ -11,6 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import { Categoria, Transacao, TransacaoUpdatePayload } from '../types';
 import { apiService } from '../services/api';
+import { Checkbox } from './Checkbox';
 
 interface ModalEditarTransacaoProps {
   isOpen: boolean;
@@ -232,20 +233,33 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
 
           {/* Seção Isolada de Frete / Taxa de Entrega (Regra de Negócio Central) */}
           <div className="pt-2 border-t border-border space-y-3">
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
+            <label
+              htmlFor="editar-teve-entrega"
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                teveEntrega
+                  ? 'bg-warning/5 border-warning/30 shadow-xs'
+                  : 'border-border hover:bg-secondary/40'
+              }`}
+            >
+              <Checkbox
+                id="editar-teve-entrega"
                 checked={teveEntrega}
                 onChange={(e) => {
                   setTeveEntrega(e.target.checked);
                   if (!e.target.checked) setValorEntrega('');
                 }}
-                className="w-4 h-4 rounded border-input text-primary focus:ring-primary focus:ring-offset-background transition cursor-pointer"
               />
-              <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                <Truck size={15} weight="duotone" className="text-warning" />
-                Esta transação teve taxa de frete / entrega?
-              </span>
+              <div className="flex-1 flex items-center gap-2">
+                <Truck size={16} weight="duotone" className={teveEntrega ? 'text-warning' : 'text-muted-foreground'} />
+                <span className="text-xs font-medium text-foreground">
+                  Esta transação teve taxa de frete / entrega?
+                </span>
+              </div>
+              {teveEntrega && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/25">
+                  Ativo
+                </span>
+              )}
             </label>
 
             {/* Campo Condicional de Frete */}

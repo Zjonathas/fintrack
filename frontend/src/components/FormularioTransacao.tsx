@@ -11,6 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import { Categoria, TransacaoCreatePayload } from '../types';
 import { apiService } from '../services/api';
+import { Checkbox } from './Checkbox';
 
 interface FormularioTransacaoProps {
   categorias: Categoria[];
@@ -250,17 +251,19 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
         <div className="pt-1">
           <label
             htmlFor="teve-entrega"
-            className="flex items-center gap-3 p-3 rounded-md border border-border cursor-pointer hover:bg-secondary/40 transition-colors"
+            className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+              teveEntrega
+                ? 'bg-warning/5 border-warning/30 shadow-xs'
+                : 'border-border hover:bg-secondary/40'
+            }`}
           >
-            <input
+            <Checkbox
               id="teve-entrega"
-              type="checkbox"
               checked={teveEntrega}
               onChange={(e) => {
                 setTeveEntrega(e.target.checked);
                 if (!e.target.checked) setValorEntrega('');
               }}
-              className="w-4 h-4 rounded border-input text-primary focus:ring-ring"
             />
             <div className="flex-1 flex items-center gap-2">
               <Truck size={16} weight="duotone" className={teveEntrega ? 'text-warning' : 'text-muted-foreground'} />

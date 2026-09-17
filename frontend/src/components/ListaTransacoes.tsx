@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Receipt, Truck, TrashSimple, PencilSimple, CheckSquare } from '@phosphor-icons/react';
 import { Transacao } from '../types';
+import { Checkbox } from './Checkbox';
 
 interface ListaTransacoesProps {
   transacoes: Transacao[];
@@ -137,14 +138,15 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
           <thead className="bg-muted/50 text-xs text-muted-foreground font-medium border-b border-border">
             <tr>
               <th scope="col" className="py-2.5 px-3 w-10 text-center">
-                <input
-                  type="checkbox"
-                  checked={todosSelecionados}
-                  onChange={toggleSelecionarTodos}
-                  title={todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos os visíveis'}
-                  aria-label="Selecionar todas as transações"
-                  className="w-4 h-4 rounded border-input text-primary focus:ring-primary focus:ring-offset-background transition cursor-pointer"
-                />
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={todosSelecionados}
+                    indeterminate={selecionados.length > 0 && !todosSelecionados}
+                    onChange={toggleSelecionarTodos}
+                    title={todosSelecionados ? 'Desmarcar todos' : 'Selecionar todos os visíveis'}
+                    aria-label="Selecionar todas as transações"
+                  />
+                </div>
               </th>
               <th scope="col" className="py-2.5 px-4">Descrição</th>
               <th scope="col" className="py-2.5 px-4">Categoria</th>
@@ -168,13 +170,13 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
                   }`}
                 >
                   <td className="py-3 px-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={estaSelecionado}
-                      onChange={() => toggleSelecionarLinha(t.id)}
-                      aria-label={`Selecionar transação ${t.descricao}`}
-                      className="w-4 h-4 rounded border-input text-primary focus:ring-primary focus:ring-offset-background transition cursor-pointer"
-                    />
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={estaSelecionado}
+                        onChange={() => toggleSelecionarLinha(t.id)}
+                        aria-label={`Selecionar transação ${t.descricao}`}
+                      />
+                    </div>
                   </td>
                   <td className="py-3 px-4 font-medium text-foreground max-w-[200px] truncate">
                     <span title={t.descricao}>{t.descricao}</span>
