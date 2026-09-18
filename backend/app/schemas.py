@@ -1,6 +1,37 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+
+
+# ==========================================
+# Schemas para Usuário e Autenticação
+# ==========================================
+
+class UsuarioBase(BaseModel):
+    nome: str = Field(..., min_length=2, max_length=150, description="Nome completo do usuário")
+    email: EmailStr = Field(..., description="Endereço de e-mail do usuário")
+
+
+class UsuarioCreate(UsuarioBase):
+    senha: str = Field(..., min_length=6, max_length=100, description="Senha de acesso (mínimo de 6 caracteres)")
+
+
+class UsuarioResponse(UsuarioBase):
+    id: int
+    criado_em: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr = Field(..., description="E-mail de acesso cadastrado")
+    senha: str = Field(..., min_length=1, description="Senha do usuário")
+
+
+class TokenResponse(BaseModel):
+    access_token: str = Field(..., description="Token de acesso JWT")
+    token_type: str = Field(default="bearer", description="Tipo do token de autenticação")
+    usuario: UsuarioResponse = Field(..., description="Dados do usuário logado")
 
 
 # ==========================================
@@ -61,7 +92,6 @@ class TransacaoBulkDeleteResponse(BaseModel):
     mensagem: str = Field(..., description="Mensagem de confirmação da operação")
 
 
-
 class TransacaoResponse(BaseModel):
     id: int
     descricao: str
@@ -70,6 +100,7 @@ class TransacaoResponse(BaseModel):
     valor_entrega: float
     data: date
     categoria_id: int
+    usuario_id: int
     categoria: Optional[CategoriaResponse] = None
     valor_total: float
 
@@ -99,3 +130,4 @@ class ResumoAnalitico(BaseModel):
     qtd_com_entrega: int
     qtd_sem_entrega: int
     gastos_por_categoria: List[GastoPorCategoria]
+

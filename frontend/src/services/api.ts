@@ -1,12 +1,16 @@
 import axios from 'axios';
 import {
+  AuthResponse,
+  BulkDeleteResponse,
   Categoria,
   FiltrosTransacao,
+  LoginPayload,
+  RegisterPayload,
   ResumoAnalitico,
   Transacao,
   TransacaoCreatePayload,
   TransacaoUpdatePayload,
-  BulkDeleteResponse,
+  Usuario,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -19,7 +23,44 @@ const api = axios.create({
   timeout: 10000,
 });
 
+// Interceptor de Requisição: Injeta automaticamente o token JWT
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('financas_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Interceptor de Resposta: Trata expiração/invalidação do token (401)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Dispara evento global para o AuthContext deslogar o usuário de forma limpa
+      window.dispatchEvent(new Event('auth:unauthorized'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const apiService = {
+  // Autenticação
+  async login(payload: LoginPayload): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/login', payload);
+    return response.data;
+  },
+
+  async register(payload: RegisterPayload): Promise<Usuario> {
+    const response = await api.post<Usuario>('/auth/register', payload);
+    return response.data;
+  },
+
+  async getMe(): Promise<Usuario> {
+    const response = await api.get<Usuario>('/auth/me');
+    return response.data;
+  },
+
   // Categorias
   async getCategorias(): Promise<Categoria[]> {
     const response = await api.get<Categoria[]>('/categorias');

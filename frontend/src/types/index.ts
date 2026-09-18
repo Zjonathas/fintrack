@@ -1,3 +1,27 @@
+export interface Usuario {
+  id: number;
+  nome: string;
+  email: string;
+  criado_em: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  senha: string;
+}
+
+export interface RegisterPayload {
+  nome: string;
+  email: string;
+  senha: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  usuario: Usuario;
+}
+
 export interface Categoria {
   id: number;
   nome: string;
@@ -11,9 +35,11 @@ export interface Transacao {
   valor_entrega: number;
   data: string;
   categoria_id: number;
+  usuario_id?: number;
   categoria?: Categoria;
   valor_total: number;
 }
+
 
 export interface TransacaoCreatePayload {
   descricao: string;

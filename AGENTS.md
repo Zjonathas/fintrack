@@ -25,6 +25,8 @@ As seguintes skills foram analisadas e instaladas especificamente para a stack e
 | **`tailwind-design-system`** | `.agents/skills/tailwind-design-system/SKILL.md` | Construção de design system coeso, paleta de cores moderna, glassmorphism e micro-animações com Tailwind CSS. |
 | **`typescript-pro`** | `.agents/skills/typescript-pro/SKILL.md` | Tipagem estrita de payloads, interfaces compartilhadas, ausência de `any` implícito e segurança type-safe. |
 | **`kpi-dashboard-design`** | `.agents/skills/kpi-dashboard-design/SKILL.md` | Arquitetura de dashboards financeiros, cartões de KPIs, taxas percentuais e visualizações analíticas de impacto orçamentário. |
+| **`security-pro`** | `.agents/skills/security-pro/SKILL.md` | Práticas de segurança OWASP, JWT hardening, hashing seguro (bcrypt), prevenção de IDOR e isolamento multi-tenant. |
+
 
 ---
 
@@ -46,6 +48,12 @@ As seguintes skills foram analisadas e instaladas especificamente para a stack e
 - O campo "Valor da Entrega" deve aparecer de forma condicional e reativa quando o usuário assinalar que houve frete.
 - As métricas financeiras (`DashboardResumo`) devem manter o cálculo isolado do impacto percentual das taxas de entrega sobre o gasto total.
 
-### 3. Comunicação e Idioma
+### 3. Autenticação JWT e Isolamento Multi-tenant
+- Todo endpoint que manipule transações ou métricas deve ser estritamente protegido pela dependência `Depends(auth.get_current_user)`.
+- As consultas ao banco de dados nunca devem confiar em IDs de usuário vindos do cliente; devem sempre filtrar por `usuario_id = current_user.id`.
+- Senhas nunca devem ser persistidas ou comparadas em texto plano (sempre utilizar hash com `bcrypt`).
+
+### 4. Comunicação e Idioma
 - Todas as interações, documentações e explicações devem ser fornecidas em **Português do Brasil**.
 - O código-fonte mantém nomenclaturas em português coerentes com o domínio do negócio (`descricao`, `valor_produto`, `teve_entrega`, `valor_entrega`, `categoria_id`).
+
