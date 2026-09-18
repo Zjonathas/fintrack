@@ -1,59 +1,8 @@
 import os
 import sys
 from pathlib import Path
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
-# Garante que o diretório 'backend' esteja no sys.path mesmo se o comando for executado da raiz do projeto
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
-
-# Configura banco de dados de teste em memória compartilhado via StaticPool
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-from app.database import Base, get_db
-
 from app.main import app
 from app import crud, models
-
-engine_test = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
-)
-
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine_test)
-
-
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_database():
-    Base.metadata.create_all(bind=engine_test)
-    db = TestingSessionLocal()
-    crud.seed_categorias_iniciais(db)
-    db.close()
-    yield
-    Base.metadata.drop_all(bind=engine_test)
-
-
-@pytest.fixture
-def client():
-    with TestClient(app) as c:
-        yield c
 
 
 def test_auth_registration_and_login(client):

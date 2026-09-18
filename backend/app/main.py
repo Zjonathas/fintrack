@@ -1,12 +1,16 @@
 from contextlib import asynccontextmanager
 from datetime import date
 from typing import List, Optional
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.orm import Session
 
 from . import auth, crud, models, schemas
 from .database import Base, engine, get_db
+from .limiter import AUTH_RATE_LIMIT, BULK_RATE_LIMIT, limiter
 
 
 @asynccontextmanager
@@ -27,9 +31,23 @@ app = FastAPI(
     title="Finanças Pessoais API",
     description="API para gestão e controle de despesas pessoais, identificação de maiores gastos, análise de economia e autenticação JWT.",
     version="1.1.0",
-
     lifespan=lifespan
 )
+
+# Configuração do Rate Limiter (SlowAPI)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={
+            "detail": f"Muitas requisições em pouco tempo. Limite excedido: {exc.detail}. Por favor, aguarde alguns instantes antes de tentar novamente."
+        }
+    )
+
 
 # Configuração de CORS para permitir acesso do frontend React/Vite
 app.add_middleware(
@@ -61,7 +79,9 @@ def health_check():
     tags=["Autenticação"],
     summary="Cadastrar um novo usuário"
 )
+@limiter.limit(AUTH_RATE_LIMIT)
 def cadastrar_usuario(
+    request: Request,
     usuario: schemas.UsuarioCreate,
     db: Session = Depends(get_db)
 ):
@@ -84,7 +104,9 @@ def cadastrar_usuario(
     tags=["Autenticação"],
     summary="Autenticar usuário e obter token JWT"
 )
+@limiter.limit(AUTH_RATE_LIMIT)
 def autenticar_usuario(
+    request: Request,
     credenciais: schemas.LoginRequest,
     db: Session = Depends(get_db)
 ):
@@ -273,7 +295,9 @@ def atualizar_transacao(
     tags=["Transações"],
     summary="Excluir múltiplas transações em lote do usuário"
 )
+@limiter.limit(BULK_RATE_LIMIT)
 def remover_transacoes_em_lote(
+    request: Request,
     payload: schemas.TransacaoBulkDeleteRequest,
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
