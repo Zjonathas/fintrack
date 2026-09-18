@@ -153,8 +153,9 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
             <div>
               <h2 className="text-base font-semibold text-foreground">Nova Transação</h2>
               <p className="text-xs text-muted-foreground">
-                Cadastre uma nova despesa com cálculo isolado de frete
+                Cadastre suas despesas e mantenha seu orçamento atualizado
               </p>
+
             </div>
           </div>
           <button

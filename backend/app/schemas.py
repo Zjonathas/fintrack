@@ -1,6 +1,56 @@
-from datetime import date
+import re
+from datetime import date, datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+
+
+# ==========================================
+# Schemas para Usuário e Autenticação
+# ==========================================
+
+class UsuarioBase(BaseModel):
+    nome: str = Field(..., min_length=2, max_length=150, description="Nome completo do usuário")
+    email: EmailStr = Field(..., description="Endereço de e-mail do usuário")
+
+
+class UsuarioCreate(UsuarioBase):
+    senha: str = Field(..., max_length=100, description="Senha de acesso (mínimo de 8 caracteres)")
+
+    @field_validator("senha")
+    @classmethod
+    def validar_complexidade_senha(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("A senha deve conter no mínimo 8 caracteres.")
+        if re.search(r"\s", v):
+            raise ValueError("A senha não pode conter espaços em branco.")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("A senha deve conter pelo menos uma letra minúscula (a-z).")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("A senha deve conter pelo menos uma letra maiúscula (A-Z).")
+        if not re.search(r"\d", v):
+            raise ValueError("A senha deve conter pelo menos um número (0-9).")
+        if not re.search(r"[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]", v):
+            raise ValueError("A senha deve conter pelo menos um caractere especial (ex: ! @ # $ % & * - _ +).")
+        return v
+
+
+
+class UsuarioResponse(UsuarioBase):
+    id: int
+    criado_em: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr = Field(..., description="E-mail de acesso cadastrado")
+    senha: str = Field(..., min_length=1, description="Senha do usuário")
+
+
+class TokenResponse(BaseModel):
+    access_token: str = Field(..., description="Token de acesso JWT")
+    token_type: str = Field(default="bearer", description="Tipo do token de autenticação")
+    usuario: UsuarioResponse = Field(..., description="Dados do usuário logado")
 
 
 # ==========================================
@@ -61,7 +111,6 @@ class TransacaoBulkDeleteResponse(BaseModel):
     mensagem: str = Field(..., description="Mensagem de confirmação da operação")
 
 
-
 class TransacaoResponse(BaseModel):
     id: int
     descricao: str
@@ -70,6 +119,7 @@ class TransacaoResponse(BaseModel):
     valor_entrega: float
     data: date
     categoria_id: int
+    usuario_id: int
     categoria: Optional[CategoriaResponse] = None
     valor_total: float
 
@@ -99,3 +149,4 @@ class ResumoAnalitico(BaseModel):
     qtd_com_entrega: int
     qtd_sem_entrega: int
     gastos_por_categoria: List[GastoPorCategoria]
+

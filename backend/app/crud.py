@@ -1,9 +1,41 @@
 from datetime import date
 from typing import List, Optional
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 from sqlalchemy.orm import Session, joinedload
 
 from . import models, schemas
+
+
+# ==========================================
+# Operações de Usuário
+# ==========================================
+
+def get_usuario_by_email(db: Session, email: str) -> Optional[models.Usuario]:
+    """Busca um usuário pelo e-mail cadastrado (case-insensitive)."""
+    return db.query(models.Usuario).filter(models.Usuario.email == email.strip().lower()).first()
+
+
+def get_usuario_by_id(db: Session, usuario_id: int) -> Optional[models.Usuario]:
+    """Busca um usuário pelo ID primário."""
+    return db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
+
+
+def create_usuario(db: Session, usuario: schemas.UsuarioCreate, senha_hash: str) -> models.Usuario:
+    """Cadastra um novo usuário com senha criptografada."""
+    db_usuario = models.Usuario(
+        nome=usuario.nome.strip(),
+        email=usuario.email.strip().lower(),
+        senha_hash=senha_hash,
+    )
+    db.add(db_usuario)
+    db.commit()
+    db.refresh(db_usuario)
+
+    # Associa transações legadas sem vínculo (anteriores à autenticação) ao primeiro usuário cadastrado
+    db.execute(text("UPDATE transacoes SET usuario_id = :uid WHERE usuario_id IS NULL"), {"uid": db_usuario.id})
+    db.commit()
+
+    return db_usuario
 
 
 # ==========================================
@@ -52,12 +84,29 @@ def seed_categorias_iniciais(db: Session):
         db.commit()
 
 
+def ensure_db_schema(db: Session):
+    """
+    Garante a integridade do schema do banco de dados (SQLite/PostgreSQL):
+    - Cria colunas faltantes em bancos já existentes (ex.: usuario_id em transacoes).
+    """
+    inspector = inspect(db.bind)
+    table_names = inspector.get_table_names()
+
+    if "transacoes" in table_names:
+        columns = [col["name"] for col in inspector.get_columns("transacoes")]
+        if "usuario_id" not in columns:
+            # Adiciona coluna usuario_id no SQLite
+            db.execute(text("ALTER TABLE transacoes ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)"))
+            db.commit()
+
+
 # ==========================================
-# Operações de Transação
+# Operações de Transação (Multi-tenant)
 # ==========================================
 
 def get_transacoes(
     db: Session,
+    usuario_id: int,
     categoria_id: Optional[int] = None,
     teve_entrega: Optional[bool] = None,
     data_inicio: Optional[date] = None,
@@ -66,8 +115,12 @@ def get_transacoes(
     skip: int = 0,
     limit: int = 200
 ) -> List[models.Transacao]:
-    """Consulta transações com filtros dinâmicos e eager-load da categoria."""
-    query = db.query(models.Transacao).options(joinedload(models.Transacao.categoria))
+    """Consulta transações pertencentes ao usuário logado com filtros dinâmicos e eager-load da categoria."""
+    query = (
+        db.query(models.Transacao)
+        .options(joinedload(models.Transacao.categoria))
+        .filter(models.Transacao.usuario_id == usuario_id)
+    )
 
     if categoria_id is not None:
         query = query.filter(models.Transacao.categoria_id == categoria_id)
@@ -89,15 +142,16 @@ def get_transacoes(
     return query.order_by(models.Transacao.data.desc(), models.Transacao.id.desc()).offset(skip).limit(limit).all()
 
 
-def create_transacao(db: Session, transacao: schemas.TransacaoCreate) -> models.Transacao:
-    """Registra uma nova transação."""
+def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id: int) -> models.Transacao:
+    """Registra uma nova transação associada ao usuário autenticado."""
     db_transacao = models.Transacao(
         descricao=transacao.descricao.strip(),
         valor_produto=round(transacao.valor_produto, 2),
         teve_entrega=transacao.teve_entrega,
         valor_entrega=round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0,
         data=transacao.data,
-        categoria_id=transacao.categoria_id
+        categoria_id=transacao.categoria_id,
+        usuario_id=usuario_id,
     )
     db.add(db_transacao)
     db.commit()
@@ -107,9 +161,13 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate) -> models.
     return db_transacao
 
 
-def delete_transacao(db: Session, transacao_id: int) -> bool:
-    """Remove uma transação pelo ID."""
-    db_transacao = db.query(models.Transacao).filter(models.Transacao.id == transacao_id).first()
+def delete_transacao(db: Session, transacao_id: int, usuario_id: int) -> bool:
+    """Remove uma transação pelo ID pertencente ao usuário logado."""
+    db_transacao = (
+        db.query(models.Transacao)
+        .filter(models.Transacao.id == transacao_id, models.Transacao.usuario_id == usuario_id)
+        .first()
+    )
     if not db_transacao:
         return False
     db.delete(db_transacao)
@@ -120,10 +178,15 @@ def delete_transacao(db: Session, transacao_id: int) -> bool:
 def update_transacao(
     db: Session,
     transacao_id: int,
-    transacao: schemas.TransacaoUpdate
+    transacao: schemas.TransacaoUpdate,
+    usuario_id: int,
 ) -> Optional[models.Transacao]:
-    """Atualiza os dados de uma transação existente."""
-    db_transacao = db.query(models.Transacao).filter(models.Transacao.id == transacao_id).first()
+    """Atualiza os dados de uma transação existente pertencente ao usuário logado."""
+    db_transacao = (
+        db.query(models.Transacao)
+        .filter(models.Transacao.id == transacao_id, models.Transacao.usuario_id == usuario_id)
+        .first()
+    )
     if not db_transacao:
         return None
 
@@ -140,23 +203,26 @@ def update_transacao(
     return db_transacao
 
 
-def delete_transacoes_bulk(db: Session, ids: List[int]) -> int:
-    """Exclui múltiplos registros de transações em lote atomicamente."""
+def delete_transacoes_bulk(db: Session, ids: List[int], usuario_id: int) -> int:
+    """Exclui múltiplos registros de transações em lote pertencentes ao usuário autenticado."""
     if not ids:
         return 0
-    qtd = db.query(models.Transacao).filter(models.Transacao.id.in_(ids)).delete(synchronize_session=False)
+    qtd = (
+        db.query(models.Transacao)
+        .filter(models.Transacao.id.in_(ids), models.Transacao.usuario_id == usuario_id)
+        .delete(synchronize_session=False)
+    )
     db.commit()
     return qtd
 
 
-
 # ==========================================
-# Resumo Analítico e Dashboard
+# Resumo Analítico e Dashboard (Isolado)
 # ==========================================
 
-def get_resumo_analitico(db: Session) -> schemas.ResumoAnalitico:
-    """Gera o resumo estatístico das transações e agrupamento por categoria."""
-    transacoes = db.query(models.Transacao).all()
+def get_resumo_analitico(db: Session, usuario_id: int) -> schemas.ResumoAnalitico:
+    """Gera o resumo estatístico e agrupamento por categoria estritamente das transações do usuário."""
+    transacoes = db.query(models.Transacao).filter(models.Transacao.usuario_id == usuario_id).all()
 
     total_produtos = 0.0
     total_entregas = 0.0
@@ -179,8 +245,7 @@ def get_resumo_analitico(db: Session) -> schemas.ResumoAnalitico:
     percentual_entregas = round((total_entregas / total_geral * 100), 2) if total_geral > 0 else 0.0
     media_valor_entrega = round((total_entregas / qtd_com_entrega), 2) if qtd_com_entrega > 0 else 0.0
 
-    # Gastos por categoria
-    # Agrupamento manual para garantir integridade e incluir categorias mesmo com zero ou cálculo dinâmico
+    # Gastos por categoria para o usuário logado
     categorias = db.query(models.Categoria).all()
     mapa_categorias = {
         c.id: {

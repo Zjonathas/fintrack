@@ -192,8 +192,9 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro & KPIs</h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Acompanhamento analítico com rastreamento isolado de taxas de entrega
+            Visão detalhada de onde seu dinheiro está sendo gasto e análise de economia
           </p>
+
         </div>
 
         <div className="flex items-center gap-2">

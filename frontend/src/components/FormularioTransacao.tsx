@@ -124,8 +124,9 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
         <div>
           <h3 className="text-sm font-semibold text-foreground">Nova Transação</h3>
           <p className="text-xs text-muted-foreground">
-            Lançamento com rastreamento isolado de frete
+            Lançamento rápido de despesas no seu orçamento
           </p>
+
         </div>
       </div>
 
