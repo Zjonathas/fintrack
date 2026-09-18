@@ -25,8 +25,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Finanças Pessoais API",
-    description="API para gestão de despesas pessoais com autenticação JWT, isolamento de usuários, rastreamento de taxas de entrega e dashboard analítico.",
+    description="API para gestão e controle de despesas pessoais, identificação de maiores gastos, análise de economia e autenticação JWT.",
     version="1.1.0",
+
     lifespan=lifespan
 )
 

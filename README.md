@@ -1,14 +1,16 @@
 # FinançasApp &bull; Gestão Financeira Pessoal
 
-> Aplicativo web moderno para controle de finanças pessoais com separação analítica de **taxas de entrega**, dashboards interativos, componentes de interface customizados, modais intuitivos e alternância de **Modo Claro / Modo Escuro**.
+> Aplicativo web moderno para controle de finanças pessoais: registre suas despesas, acompanhe para onde vai seu dinheiro, identifique onde você mais gasta e encontre oportunidades reais para economizar.
 
 ---
 
-## 🎯 Proposta & Diferencial
+## 🎯 Proposta & Objetivo
 
-Na maioria dos aplicativos de finanças, os custos com delivery ou fretes de compras online ficam diluídos no valor total dos produtos, dificultando a percepção de quanto do orçamento mensal é consumido apenas com taxas logísticas.
+Ter clareza sobre para onde vai o seu dinheiro é o primeiro passo para economizar e conquistar estabilidade financeira. O **FinançasApp** foi desenvolvido para transformar o registro de despesas em uma experiência simples, intuitiva e analítica:
 
-O **FinançasApp** isola e quantifica as despesas com entrega, oferecendo métricas claras sobre o impacto logístico nas suas compras do dia a dia.
+- 📊 **Onde você mais gasta**: Gráficos e indicadores que destacam as categorias de maior impacto no seu orçamento mensal.
+- 💡 **Oportunidades de economia**: Visão clara de custos fixos e variáveis para planejar onde é possível reduzir despesas.
+- 📦 **Detalhamento opcional de fretes**: Possibilidade de separar despesas de frete/delivery do custo do produto quando aplicável.
 
 ---
 
@@ -18,11 +20,13 @@ O **FinançasApp** isola e quantifica as despesas com entrega, oferecendo métri
   - Cadastro de novos usuários com validação estrita de e-mail e hashing seguro de senhas com `bcrypt`.
   - Sessões stateless via tokens **JSON Web Token (JWT)** no padrão Bearer Token.
   - **Isolamento Completo de Dados**: Cada usuário visualiza, cria, edita e exclui unicamente as suas transações e dados estatísticos no dashboard.
-- 📦 **Rastreamento Isolado de Fretes**: Formulário reativo que separa o valor do produto da taxa de entrega, calculando e exibindo automaticamente o impacto percentual no orçamento.
+- 💡 **Análise de Gastos & Economia**: Acompanhe o total gasto por categoria e no mês, identificando excessos e oportunidades de economia.
+- 📦 **Segregação Opcional de Frete**: Formulário reativo que permite separar o valor do produto da taxa de entrega para maior precisão financeira.
 - 📊 **Dashboards Interativos com Recharts**:
-  - **Distribuição por Categoria**: Gráfico Donut com percentuais e valores absolutos.
+  - **Distribuição por Categoria**: Gráfico Donut destacando as áreas de maior gasto com percentuais e valores absolutos.
   - **Produto vs. Frete**: Gráfico de barras empilhadas para comparar gastos reais vs. taxas logísticas.
   - **Evolução Histórica**: Gráfico de área temporal exibindo a curva de despesas diárias.
+
 - 📝 **Modais de Ação e Layout em Largura Total**:
   - **Modal de Nova Transação**: Janela modal elegante para cadastro rápido, liberando a tabela de extrato para ocupar a largura total da tela.
   - **Modal de Edição Completa**: Permite atualizar qualquer detalhe de transações existentes (descrição, valor, frete, categoria e data) com sincronização em tempo real dos totais.

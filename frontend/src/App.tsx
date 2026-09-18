@@ -13,7 +13,7 @@ import {
   Sparkle,
   ShieldCheck,
   ChartPieSlice,
-  Package,
+  TrendUp,
 } from '@phosphor-icons/react';
 import { Categoria, FiltrosTransacao, ResumoAnalitico, Transacao } from './types';
 import { apiService } from './services/api';
@@ -317,10 +317,10 @@ function AppContent() {
                 <span>Gestão Financeira Inteligente & Segura</span>
               </div>
               <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
-                Controle suas despesas com separação precisa de fretes
+                Controle seus gastos e descubra onde você pode economizar
               </h2>
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                Descubra exatamente quanto do seu orçamento mensal é consumido por taxas de entrega. Acesse ou crie sua conta para começar.
+                Acompanhe para onde vai seu dinheiro, analise suas maiores despesas por categoria e tome decisões financeiras mais inteligentes.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <button
@@ -343,11 +343,11 @@ function AppContent() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto">
               <div className="p-5 rounded-2xl bg-card border border-border shadow-2xs space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                  <Package size={22} weight="duotone" />
+                  <TrendUp size={22} weight="duotone" />
                 </div>
-                <h3 className="font-semibold text-sm text-foreground">Rastreamento Isolado de Frete</h3>
+                <h3 className="font-semibold text-sm text-foreground">Onde Você Gasta Mais</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Nunca mais deixe taxas de delivery passarem despercebidas no valor total dos produtos.
+                  Identifique com precisão as categorias que mais pesam no bolso e veja oportunidades para economizar.
                 </p>
               </div>
 
@@ -428,7 +428,7 @@ function AppContent() {
       {/* Footer */}
       <footer className="border-t border-border py-4 mt-8 bg-card/40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center text-xs text-muted-foreground">
-          FinançasApp — Gestão de despesas com rastreamento isolado de fretes e gráficos interativos
+          FinançasApp — Controle de gastos pessoais inteligente para você economizar mais
         </div>
       </footer>
     </div>
