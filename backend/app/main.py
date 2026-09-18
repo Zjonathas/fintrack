@@ -1,3 +1,4 @@
+import re
 from contextlib import asynccontextmanager
 from datetime import date
 from typing import List, Optional
@@ -38,13 +39,30 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 
+def formatar_limite_pt(detalhe: str) -> str:
+    """Traduz descrições em inglês de limites do SlowAPI para português amigável."""
+    if not detalhe:
+        return "limite excedido"
+    texto = str(detalhe).strip()
+    texto = re.sub(r"\bper\s+1\s+minute\b", "por minuto", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+(\d+)\s+minutes\b", r"a cada \1 minutos", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+minute\b", "por minuto", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+1\s+second\b", "por segundo", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+second\b", "por segundo", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+1\s+hour\b", "por hora", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+hour\b", "por hora", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+1\s+day\b", "por dia", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\bper\s+day\b", "por dia", texto, flags=re.IGNORECASE)
+    return texto
+
 
 @app.exception_handler(RateLimitExceeded)
 def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    limite_formatado = formatar_limite_pt(exc.detail)
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         content={
-            "detail": f"Muitas requisições em pouco tempo. Limite excedido: {exc.detail}. Por favor, aguarde alguns instantes antes de tentar novamente."
+            "detail": f"Muitas requisições em pouco tempo. Limite excedido: {limite_formatado}. Por favor, aguarde alguns instantes antes de tentar novamente."
         }
     )
 

@@ -119,8 +119,17 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
       onClose();
     } catch (err: any) {
       if (err.response?.status === 429) {
-        const detalhe = err.response?.data?.detail;
-        setErro(typeof detalhe === 'string' ? detalhe : 'Muitas tentativas em pouco tempo. Por favor, aguarde alguns instantes antes de tentar novamente.');
+        let detalhe = err.response?.data?.detail;
+        if (typeof detalhe === 'string') {
+          detalhe = detalhe
+            .replace(/per\s+1\s+minute/gi, 'por minuto')
+            .replace(/per\s+minute/gi, 'por minuto')
+            .replace(/per\s+1\s+second/gi, 'por segundo')
+            .replace(/per\s+1\s+hour/gi, 'por hora');
+          setErro(detalhe);
+        } else {
+          setErro('Muitas tentativas em pouco tempo. Por favor, aguarde alguns instantes antes de tentar novamente.');
+        }
         return;
       }
       const detalhe = err.response?.data?.detail;

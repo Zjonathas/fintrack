@@ -24,6 +24,8 @@ def test_rate_limit_on_login(client):
     dados = resp_bloqueada.json()
     assert "detail" in dados
     assert "Muitas requisições em pouco tempo" in dados["detail"]
+    assert "5 por minuto" in dados["detail"]
+    assert "per 1 minute" not in dados["detail"]
 
 
 def test_rate_limit_on_register(client):
@@ -45,7 +47,10 @@ def test_rate_limit_on_register(client):
 
     # 6ª requisição é bloqueada com 429
     assert respostas[5].status_code == 429
-    assert "Muitas requisições em pouco tempo" in respostas[5].json()["detail"]
+    dados_reg = respostas[5].json()
+    assert "Muitas requisições em pouco tempo" in dados_reg["detail"]
+    assert "5 por minuto" in dados_reg["detail"]
+    assert "per 1 minute" not in dados_reg["detail"]
 
 
 def test_rate_limit_reset(client):
