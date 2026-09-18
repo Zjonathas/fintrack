@@ -60,7 +60,7 @@ def test_auth_registration_and_login(client):
     # 1. Registrar usuário Alice
     resp_reg = client.post(
         "/api/auth/register",
-        json={"nome": "Alice Silva", "email": "alice@exemplo.com", "senha": "senhaSegura123"}
+        json={"nome": "Alice Silva", "email": "alice@exemplo.com", "senha": "SenhaSegura@123"}
     )
     assert resp_reg.status_code == 201
     dados_alice = resp_reg.json()
@@ -73,7 +73,7 @@ def test_auth_registration_and_login(client):
     # 2. Tentativa de cadastro duplicado com mesmo e-mail
     resp_dup = client.post(
         "/api/auth/register",
-        json={"nome": "Alice Clone", "email": "alice@exemplo.com", "senha": "outrasenha"}
+        json={"nome": "Alice Clone", "email": "alice@exemplo.com", "senha": "OutraSenha@123"}
     )
     assert resp_dup.status_code == 400
     assert "Já existe uma conta" in resp_dup.json()["detail"]
@@ -81,7 +81,7 @@ def test_auth_registration_and_login(client):
     # 3. Tentativa de login com senha incorreta
     resp_err = client.post(
         "/api/auth/login",
-        json={"email": "alice@exemplo.com", "senha": "senhaErrada"}
+        json={"email": "alice@exemplo.com", "senha": "SenhaErrada@123"}
     )
     assert resp_err.status_code == 401
     assert "E-mail ou senha incorretos" in resp_err.json()["detail"]
@@ -89,7 +89,7 @@ def test_auth_registration_and_login(client):
     # 4. Login com senha correta
     resp_login = client.post(
         "/api/auth/login",
-        json={"email": "alice@exemplo.com", "senha": "senhaSegura123"}
+        json={"email": "alice@exemplo.com", "senha": "SenhaSegura@123"}
     )
     assert resp_login.status_code == 200
     token_data = resp_login.json()
@@ -121,11 +121,11 @@ def test_multi_tenant_data_isolation(client):
     # Cria Usuário 1 (Carlos)
     client.post(
         "/api/auth/register",
-        json={"nome": "Carlos Mendes", "email": "carlos@exemplo.com", "senha": "senhaCarlos123"}
+        json={"nome": "Carlos Mendes", "email": "carlos@exemplo.com", "senha": "SenhaCarlos@123"}
     )
     login_carlos = client.post(
         "/api/auth/login",
-        json={"email": "carlos@exemplo.com", "senha": "senhaCarlos123"}
+        json={"email": "carlos@exemplo.com", "senha": "SenhaCarlos@123"}
     ).json()
     token_carlos = login_carlos["access_token"]
     headers_carlos = {"Authorization": f"Bearer {token_carlos}"}
@@ -133,11 +133,11 @@ def test_multi_tenant_data_isolation(client):
     # Cria Usuário 2 (Beatriz)
     client.post(
         "/api/auth/register",
-        json={"nome": "Beatriz Rocha", "email": "beatriz@exemplo.com", "senha": "senhaBeatriz123"}
+        json={"nome": "Beatriz Rocha", "email": "beatriz@exemplo.com", "senha": "SenhaBeatriz@123"}
     )
     login_beatriz = client.post(
         "/api/auth/login",
-        json={"email": "beatriz@exemplo.com", "senha": "senhaBeatriz123"}
+        json={"email": "beatriz@exemplo.com", "senha": "SenhaBeatriz@123"}
     ).json()
     token_beatriz = login_beatriz["access_token"]
     headers_beatriz = {"Authorization": f"Bearer {token_beatriz}"}
@@ -218,11 +218,11 @@ def test_transaction_update_and_bulk_delete(client):
     # Cria usuário Diana
     client.post(
         "/api/auth/register",
-        json={"nome": "Diana Prince", "email": "diana@exemplo.com", "senha": "senhaDiana123"}
+        json={"nome": "Diana Prince", "email": "diana@exemplo.com", "senha": "SenhaDiana@123"}
     )
     login_diana = client.post(
         "/api/auth/login",
-        json={"email": "diana@exemplo.com", "senha": "senhaDiana123"}
+        json={"email": "diana@exemplo.com", "senha": "SenhaDiana@123"}
     ).json()
     token_diana = login_diana["access_token"]
     headers_diana = {"Authorization": f"Bearer {token_diana}"}
@@ -287,4 +287,62 @@ def test_invalid_token_rejected(client):
         headers={"Authorization": "Bearer token.totalmente.invalido"}
     )
     assert resp.status_code == 401
+
+
+def test_password_strength_requirements(client):
+    # 1. Menos de 8 caracteres
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Curto", "email": "curto@exemplo.com", "senha": "Curta1!"}
+    )
+    assert resp.status_code == 422
+    assert "8 caracteres" in resp.text
+
+    # 2. Sem letra maiúscula
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Sem Maiuscula", "email": "minuscula@exemplo.com", "senha": "senhaminuscula@1"}
+    )
+    assert resp.status_code == 422
+    assert "maiúscula" in resp.text
+
+    # 3. Sem letra minúscula
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Sem Minuscula", "email": "maiuscula@exemplo.com", "senha": "SENHAMAIUSCULA@1"}
+    )
+    assert resp.status_code == 422
+    assert "minúscula" in resp.text
+
+    # 4. Sem número
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Sem Numero", "email": "numero@exemplo.com", "senha": "SenhaSemNumero@!"}
+    )
+    assert resp.status_code == 422
+    assert "número" in resp.text
+
+    # 5. Sem caractere especial
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Sem Especial", "email": "especial@exemplo.com", "senha": "SenhaSemEspecial123"}
+    )
+    assert resp.status_code == 422
+    assert "especial" in resp.text
+
+    # 6. Com espaços em branco
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Com Espaco", "email": "espaco@exemplo.com", "senha": "Senha Com Espaco@123"}
+    )
+    assert resp.status_code == 422
+    assert "espaços" in resp.text
+
+    # 7. Senha válida completa
+    resp = client.post(
+        "/api/auth/register",
+        json={"nome": "Usuario Valido", "email": "valido@exemplo.com", "senha": "SenhaValida@123"}
+    )
+    assert resp.status_code == 201
+
 

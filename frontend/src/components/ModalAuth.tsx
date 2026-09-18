@@ -78,8 +78,28 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
         setErro('Por favor, informe seu nome completo.');
         return;
       }
-      if (senha.length < 6) {
-        setErro('A senha deve conter no mínimo 6 caracteres.');
+      if (senha.length < 8) {
+        setErro('A senha deve conter no mínimo 8 caracteres.');
+        return;
+      }
+      if (/\s/.test(senha)) {
+        setErro('A senha não pode conter espaços em branco.');
+        return;
+      }
+      if (!/[a-z]/.test(senha)) {
+        setErro('A senha deve conter pelo menos uma letra minúscula (a-z).');
+        return;
+      }
+      if (!/[A-Z]/.test(senha)) {
+        setErro('A senha deve conter pelo menos uma letra maiúscula (A-Z).');
+        return;
+      }
+      if (!/\d/.test(senha)) {
+        setErro('A senha deve conter pelo menos um número (0-9).');
+        return;
+      }
+      if (!/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha)) {
+        setErro('A senha deve conter pelo menos um caractere especial (ex: ! @ # $ % & * - _).');
         return;
       }
       if (senha !== confirmarSenha) {
@@ -102,7 +122,8 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
       if (typeof detalhe === 'string') {
         setErro(detalhe);
       } else if (Array.isArray(detalhe) && detalhe[0]?.msg) {
-        setErro(detalhe[0].msg);
+        const msgFormatada = String(detalhe[0].msg).replace(/^Value error,\s*/i, '');
+        setErro(msgFormatada);
       } else {
         setErro(tab === 'login' ? 'Falha ao autenticar. Verifique seus dados.' : 'Falha ao realizar cadastro.');
       }
@@ -230,7 +251,7 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
               <input
                 type={mostrarSenha ? 'text' : 'password'}
                 required
-                placeholder={tab === 'register' ? 'Mínimo de 6 caracteres' : 'Sua senha'}
+                placeholder={tab === 'register' ? 'Mínimo de 8 caracteres fortes' : 'Sua senha'}
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="w-full pl-9 pr-10 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
@@ -244,7 +265,41 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                 {mostrarSenha ? <EyeSlash size={16} weight="bold" /> : <Eye size={16} weight="bold" />}
               </button>
             </div>
+
+            {/* Checklist em tempo real dos requisitos de senha */}
+            {tab === 'register' && senha.length > 0 && (
+              <div className="mt-2 p-2.5 rounded-lg bg-secondary/40 border border-border/70 text-[11px] space-y-1 animate-in fade-in duration-150">
+                <span className="font-semibold text-foreground block mb-1">Requisitos de segurança:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1">
+                  <div className={`flex items-center gap-1.5 transition-colors ${senha.length >= 8 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${senha.length >= 8 ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                    <span>Mínimo 8 caracteres</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${/[A-Z]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                    <span>Letra maiúscula (A-Z)</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${/[a-z]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                    <span>Letra minúscula (a-z)</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${/\d/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${/\d/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                    <span>Número (0-9)</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                    <span>Especial (! @ # $ %...)</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 transition-colors ${!/\s/.test(senha) ? 'text-primary font-medium' : 'text-destructive font-medium'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${!/\s/.test(senha) ? 'bg-primary' : 'bg-destructive'}`} />
+                    <span>Sem espaços</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+
 
           {tab === 'register' && (
             <div className="space-y-1">

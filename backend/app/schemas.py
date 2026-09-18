@@ -1,6 +1,7 @@
+import re
 from datetime import date, datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 
 # ==========================================
@@ -13,7 +14,25 @@ class UsuarioBase(BaseModel):
 
 
 class UsuarioCreate(UsuarioBase):
-    senha: str = Field(..., min_length=6, max_length=100, description="Senha de acesso (mínimo de 6 caracteres)")
+    senha: str = Field(..., max_length=100, description="Senha de acesso (mínimo de 8 caracteres)")
+
+    @field_validator("senha")
+    @classmethod
+    def validar_complexidade_senha(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("A senha deve conter no mínimo 8 caracteres.")
+        if re.search(r"\s", v):
+            raise ValueError("A senha não pode conter espaços em branco.")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("A senha deve conter pelo menos uma letra minúscula (a-z).")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("A senha deve conter pelo menos uma letra maiúscula (A-Z).")
+        if not re.search(r"\d", v):
+            raise ValueError("A senha deve conter pelo menos um número (0-9).")
+        if not re.search(r"[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]", v):
+            raise ValueError("A senha deve conter pelo menos um caractere especial (ex: ! @ # $ % & * - _ +).")
+        return v
+
 
 
 class UsuarioResponse(UsuarioBase):
