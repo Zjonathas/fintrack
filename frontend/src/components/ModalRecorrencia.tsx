@@ -51,7 +51,7 @@ export const ModalRecorrencia: React.FC<ModalRecorrenciaProps> = ({
       setTipo(recorrencia.tipo);
       setDescricao(recorrencia.descricao);
       setValor(String(recorrencia.valor));
-      setCategoriaId(recorrencia.categoria_id);
+      setCategoriaId(recorrencia.categoria_id ?? '');
       setDiaVencimento(String(recorrencia.dia_vencimento));
       setFrequencia(recorrencia.frequencia);
       setObservacao(recorrencia.observacao || '');
@@ -84,7 +84,7 @@ export const ModalRecorrencia: React.FC<ModalRecorrenciaProps> = ({
       setFeedback({ tipo: 'erro', msg: 'O valor deve ser positivo.' });
       return;
     }
-    if (!categoriaId) {
+    if (tipo === 'despesa' && !categoriaId) {
       setFeedback({ tipo: 'erro', msg: 'Selecione uma categoria.' });
       return;
     }
@@ -97,7 +97,7 @@ export const ModalRecorrencia: React.FC<ModalRecorrenciaProps> = ({
       descricao: descricao.trim(),
       valor: numValor,
       tipo,
-      categoria_id: Number(categoriaId),
+      categoria_id: tipo === 'despesa' ? Number(categoriaId) : null,
       dia_vencimento: numDia,
       frequencia,
       observacao: observacao.trim() || undefined,
@@ -114,8 +114,18 @@ export const ModalRecorrencia: React.FC<ModalRecorrenciaProps> = ({
       }
       onSalvo();
       setTimeout(() => onClose(), 800);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao salvar.';
+    } catch (err: any) {
+      let msg = 'Erro ao salvar.';
+      if (err?.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => `${d.loc?.slice(-1)[0] || 'Campo'}: ${d.msg}`).join(' | ');
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setFeedback({ tipo: 'erro', msg });
     } finally {
       setSubmetendo(false);
@@ -213,17 +223,19 @@ export const ModalRecorrencia: React.FC<ModalRecorrenciaProps> = ({
             />
           </div>
 
-          {/* Categoria */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground">Categoria *</label>
-            <Select
-              id="recorrencia-categoria"
-              value={categoriaId}
-              onChange={(val) => setCategoriaId(val ? Number(val) : '')}
-              placeholder="Selecione uma categoria..."
-              options={categorias.map((c) => ({ value: c.id, label: c.nome }))}
-            />
-          </div>
+          {/* Categoria (apenas para despesas) */}
+          {tipo === 'despesa' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Categoria *</label>
+              <Select
+                id="recorrencia-categoria"
+                value={categoriaId}
+                onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+                placeholder="Selecione uma categoria..."
+                options={categorias.map((c) => ({ value: c.id, label: c.nome }))}
+              />
+            </div>
+          )}
 
           {/* Dia de vencimento + Frequência */}
           <div className="grid grid-cols-2 gap-3">

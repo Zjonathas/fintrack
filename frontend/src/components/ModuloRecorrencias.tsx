@@ -103,7 +103,7 @@ export const ModuloRecorrencias: React.FC<ModuloRecorrenciasProps> = ({
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-foreground truncate">{r.descricao}</p>
               <p className="text-[11px] text-muted-foreground">
-                {r.categoria?.nome} · Dia {r.dia_vencimento} · {FREQUENCIA_LABEL[r.frequencia] || r.frequencia}
+                {r.categoria?.nome ? `${r.categoria.nome} · ` : ''}Dia {r.dia_vencimento} · {FREQUENCIA_LABEL[r.frequencia] || r.frequencia}
               </p>
             </div>
 

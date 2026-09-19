@@ -82,7 +82,7 @@ def ensure_db_schema(db: Session):
     table_names = inspector.get_table_names()
 
     if 'transacoes' in table_names:
-        columns = [col['name'] for col in inspector.get_columns('transacoes')]
+        columns = {col['name']: col for col in inspector.get_columns('transacoes')}
         if 'usuario_id' not in columns:
             db.execute(text('ALTER TABLE transacoes ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id)'))
             db.commit()
@@ -104,6 +104,96 @@ def ensure_db_schema(db: Session):
         if 'compra_parcelada_id' not in columns:
             db.execute(text('ALTER TABLE transacoes ADD COLUMN compra_parcelada_id VARCHAR(36)'))
             db.commit()
+
+        # Migracao SQLite: permitir categoria_id NULL para transacoes de receita
+        if 'categoria_id' in columns and not columns['categoria_id'].get('nullable', True):
+            if db.bind.dialect.name == 'sqlite':
+                db.execute(text('PRAGMA foreign_keys=OFF'))
+                db.execute(text('''
+                    CREATE TABLE transacoes_migracao (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        descricao VARCHAR(255) NOT NULL,
+                        valor_produto FLOAT NOT NULL,
+                        teve_entrega BOOLEAN DEFAULT 0 NOT NULL,
+                        valor_entrega FLOAT DEFAULT 0.0,
+                        data DATE NOT NULL,
+                        categoria_id INTEGER,
+                        usuario_id INTEGER NOT NULL,
+                        tipo VARCHAR(20) DEFAULT 'despesa' NOT NULL,
+                        forma_pagamento VARCHAR(30) DEFAULT 'dinheiro' NOT NULL,
+                        cartao_id INTEGER,
+                        parcela_atual INTEGER DEFAULT 1,
+                        total_parcelas INTEGER DEFAULT 1,
+                        compra_parcelada_id VARCHAR(36),
+                        FOREIGN KEY(categoria_id) REFERENCES categorias(id) ON DELETE SET NULL,
+                        FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                        FOREIGN KEY(cartao_id) REFERENCES cartoes_credito(id) ON DELETE SET NULL
+                    )
+                '''))
+                db.execute(text('''
+                    INSERT INTO transacoes_migracao (
+                        id, descricao, valor_produto, teve_entrega, valor_entrega,
+                        data, categoria_id, usuario_id, tipo, forma_pagamento,
+                        cartao_id, parcela_atual, total_parcelas, compra_parcelada_id
+                    )
+                    SELECT
+                        id, descricao, valor_produto, teve_entrega, valor_entrega,
+                        data, categoria_id, usuario_id, tipo, forma_pagamento,
+                        cartao_id, parcela_atual, total_parcelas, compra_parcelada_id
+                    FROM transacoes
+                '''))
+                db.execute(text('DROP TABLE transacoes'))
+                db.execute(text('ALTER TABLE transacoes_migracao RENAME TO transacoes'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_id ON transacoes (id)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_data ON transacoes (data)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_categoria_id ON transacoes (categoria_id)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_usuario_id ON transacoes (usuario_id)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_tipo ON transacoes (tipo)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_cartao_id ON transacoes (cartao_id)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_compra_parcelada_id ON transacoes (compra_parcelada_id)'))
+                db.execute(text('PRAGMA foreign_keys=ON'))
+                db.commit()
+
+    if 'transacoes_recorrentes' in table_names:
+        columns_rec = {col['name']: col for col in inspector.get_columns('transacoes_recorrentes')}
+        if 'categoria_id' in columns_rec and not columns_rec['categoria_id'].get('nullable', True):
+            if db.bind.dialect.name == 'sqlite':
+                db.execute(text('PRAGMA foreign_keys=OFF'))
+                db.execute(text('''
+                    CREATE TABLE transacoes_recorrentes_migracao (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        descricao VARCHAR(255) NOT NULL,
+                        valor FLOAT NOT NULL,
+                        tipo VARCHAR(20) NOT NULL,
+                        categoria_id INTEGER,
+                        usuario_id INTEGER NOT NULL,
+                        dia_vencimento INTEGER NOT NULL,
+                        frequencia VARCHAR(20) DEFAULT 'mensal' NOT NULL,
+                        ativa BOOLEAN DEFAULT 1 NOT NULL,
+                        observacao VARCHAR(500),
+                        criado_em DATETIME NOT NULL,
+                        FOREIGN KEY(categoria_id) REFERENCES categorias(id) ON DELETE SET NULL,
+                        FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                    )
+                '''))
+                db.execute(text('''
+                    INSERT INTO transacoes_recorrentes_migracao (
+                        id, descricao, valor, tipo, categoria_id, usuario_id,
+                        dia_vencimento, frequencia, ativa, observacao, criado_em
+                    )
+                    SELECT
+                        id, descricao, valor, tipo, categoria_id, usuario_id,
+                        dia_vencimento, frequencia, ativa, observacao, criado_em
+                    FROM transacoes_recorrentes
+                '''))
+                db.execute(text('DROP TABLE transacoes_recorrentes'))
+                db.execute(text('ALTER TABLE transacoes_recorrentes_migracao RENAME TO transacoes_recorrentes'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_recorrentes_id ON transacoes_recorrentes (id)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_recorrentes_tipo ON transacoes_recorrentes (tipo)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_recorrentes_categoria_id ON transacoes_recorrentes (categoria_id)'))
+                db.execute(text('CREATE INDEX IF NOT EXISTS ix_transacoes_recorrentes_usuario_id ON transacoes_recorrentes (usuario_id)'))
+                db.execute(text('PRAGMA foreign_keys=ON'))
+                db.commit()
 
 
 # ==========================================
@@ -347,14 +437,14 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
         db_transacao = models.Transacao(
             descricao=transacao.descricao.strip(),
             valor_produto=round(transacao.valor_produto, 2),
-            teve_entrega=transacao.teve_entrega,
-            valor_entrega=round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0,
+            teve_entrega=False if transacao.tipo == 'receita' else transacao.teve_entrega,
+            valor_entrega=0.0 if transacao.tipo == 'receita' else (round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0),
             data=transacao.data,
-            categoria_id=transacao.categoria_id,
+            categoria_id=None if transacao.tipo == 'receita' else transacao.categoria_id,
             usuario_id=usuario_id,
             tipo=transacao.tipo,
             forma_pagamento=transacao.forma_pagamento,
-            cartao_id=transacao.cartao_id if transacao.forma_pagamento == 'credito' else None,
+            cartao_id=None if transacao.tipo == 'receita' else (transacao.cartao_id if transacao.forma_pagamento == 'credito' else None),
             parcela_atual=1,
             total_parcelas=1,
         )
@@ -389,13 +479,13 @@ def update_transacao(db: Session, transacao_id: int, transacao: schemas.Transaca
 
     db_transacao.descricao = transacao.descricao.strip()
     db_transacao.valor_produto = round(transacao.valor_produto, 2)
-    db_transacao.teve_entrega = transacao.teve_entrega
-    db_transacao.valor_entrega = round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0
+    db_transacao.teve_entrega = False if transacao.tipo == 'receita' else transacao.teve_entrega
+    db_transacao.valor_entrega = 0.0 if transacao.tipo == 'receita' else (round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0)
     db_transacao.data = transacao.data
-    db_transacao.categoria_id = transacao.categoria_id
+    db_transacao.categoria_id = None if transacao.tipo == 'receita' else transacao.categoria_id
     db_transacao.tipo = transacao.tipo
     db_transacao.forma_pagamento = transacao.forma_pagamento
-    db_transacao.cartao_id = transacao.cartao_id if transacao.forma_pagamento == 'credito' else None
+    db_transacao.cartao_id = None if transacao.tipo == 'receita' else (transacao.cartao_id if transacao.forma_pagamento == 'credito' else None)
 
     db.commit()
     db.refresh(db_transacao)
@@ -443,7 +533,7 @@ def create_recorrencia(db: Session, rec: schemas.TransacaoRecorrenteCreate, usua
         descricao=rec.descricao.strip(),
         valor=round(rec.valor, 2),
         tipo=rec.tipo,
-        categoria_id=rec.categoria_id,
+        categoria_id=None if rec.tipo == 'receita' else rec.categoria_id,
         usuario_id=usuario_id,
         dia_vencimento=rec.dia_vencimento,
         frequencia=rec.frequencia,
@@ -467,7 +557,9 @@ def update_recorrencia(db: Session, recorrencia_id: int, rec: schemas.TransacaoR
         db_rec.valor = round(rec.valor, 2)
     if rec.tipo is not None:
         db_rec.tipo = rec.tipo
-    if rec.categoria_id is not None:
+    if rec.tipo == 'receita' or db_rec.tipo == 'receita':
+        db_rec.categoria_id = None
+    elif rec.categoria_id is not None:
         db_rec.categoria_id = rec.categoria_id
     if rec.dia_vencimento is not None:
         db_rec.dia_vencimento = rec.dia_vencimento

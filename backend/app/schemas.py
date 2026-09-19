@@ -122,7 +122,7 @@ class TransacaoBase(BaseModel):
     teve_entrega: bool = Field(default=False, description='Flag indicando se houve taxa de frete/entrega')
     valor_entrega: Optional[float] = Field(default=0.0, ge=0, description='Valor pago pelo frete/entrega')
     data: date = Field(default_factory=date.today, description='Data da transacao')
-    categoria_id: int = Field(..., description='ID da categoria associada')
+    categoria_id: Optional[int] = Field(None, description='ID da categoria associada (obrigatorio para despesas)')
     tipo: str = Field(default='despesa', description='Natureza da transacao: receita ou despesa')
     forma_pagamento: str = Field(default='dinheiro', description='Forma de pagamento utilizada')
     cartao_id: Optional[int] = Field(None, description='ID do cartao de credito (obrigatorio se forma_pagamento=credito)')
@@ -147,18 +147,23 @@ class TransacaoBase(BaseModel):
 class TransacaoCreate(TransacaoBase):
     @model_validator(mode='after')
     def validate_rules(self):
-        # Receitas nao tem frete
+        # Receitas: sem frete, sem categoria, sem cartao de credito (apenas valor, descricao e data)
         if self.tipo == 'receita':
             self.teve_entrega = False
             self.valor_entrega = 0.0
+            self.categoria_id = None
+            self.cartao_id = None
+            self.total_parcelas = 1
         else:
+            if not self.categoria_id:
+                raise ValueError('categoria_id e obrigatorio para despesas.')
             if not self.teve_entrega:
                 self.valor_entrega = 0.0
             elif self.valor_entrega is None:
                 self.valor_entrega = 0.0
-        # Cartao de credito exige cartao_id
-        if self.forma_pagamento == 'credito' and not self.cartao_id:
-            raise ValueError('cartao_id e obrigatorio quando forma_pagamento for credito.')
+            # Cartao de credito exige cartao_id
+            if self.forma_pagamento == 'credito' and not self.cartao_id:
+                raise ValueError('cartao_id e obrigatorio quando forma_pagamento for credito.')
         # Garantir total_parcelas minimo
         if self.total_parcelas is None:
             self.total_parcelas = 1
@@ -185,7 +190,7 @@ class TransacaoResponse(BaseModel):
     teve_entrega: bool
     valor_entrega: float
     data: date
-    categoria_id: int
+    categoria_id: Optional[int] = None
     usuario_id: int
     tipo: str
     forma_pagamento: str
@@ -207,7 +212,7 @@ class TransacaoRecorrenteBase(BaseModel):
     descricao: str = Field(..., min_length=1, max_length=255)
     valor: float = Field(..., gt=0, description='Valor mensal recorrente')
     tipo: str = Field(..., description='receita ou despesa')
-    categoria_id: int = Field(..., description='ID da categoria')
+    categoria_id: Optional[int] = Field(None, description='ID da categoria (obrigatorio para despesas)')
     dia_vencimento: int = Field(..., ge=1, le=31, description='Dia do mes para vencimento/recebimento')
     frequencia: str = Field(default='mensal')
     observacao: Optional[str] = Field(None, max_length=500)
@@ -221,7 +226,13 @@ class TransacaoRecorrenteBase(BaseModel):
 
 
 class TransacaoRecorrenteCreate(TransacaoRecorrenteBase):
-    pass
+    @model_validator(mode='after')
+    def validate_rules(self):
+        if self.tipo == 'receita':
+            self.categoria_id = None
+        elif not self.categoria_id:
+            raise ValueError('categoria_id e obrigatorio para despesas recorrentes.')
+        return self
 
 
 class TransacaoRecorrenteUpdate(BaseModel):

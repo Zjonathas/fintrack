@@ -247,13 +247,14 @@ def registrar_transacao(
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Valida se a categoria informada existe
-    cat = crud.get_categoria_by_id(db=db, categoria_id=transacao.categoria_id)
-    if not cat:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
-        )
+    # Valida se a categoria informada existe (apenas se fornecida, como em despesas)
+    if transacao.categoria_id is not None:
+        cat = crud.get_categoria_by_id(db=db, categoria_id=transacao.categoria_id)
+        if not cat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
+            )
     return crud.create_transacao(db=db, transacao=transacao, usuario_id=current_user.id)
 
 
@@ -289,13 +290,14 @@ def atualizar_transacao(
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Valida se a categoria informada existe
-    cat = crud.get_categoria_by_id(db=db, categoria_id=transacao.categoria_id)
-    if not cat:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
-        )
+    # Valida se a categoria informada existe (apenas se fornecida)
+    if transacao.categoria_id is not None:
+        cat = crud.get_categoria_by_id(db=db, categoria_id=transacao.categoria_id)
+        if not cat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
+            )
     atualizado = crud.update_transacao(
         db=db,
         transacao_id=transacao_id,
@@ -490,12 +492,13 @@ def criar_recorrencia(
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    cat = crud.get_categoria_by_id(db=db, categoria_id=recorrencia.categoria_id)
-    if not cat:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Categoria com ID {recorrencia.categoria_id} não encontrada."
-        )
+    if recorrencia.categoria_id is not None:
+        cat = crud.get_categoria_by_id(db=db, categoria_id=recorrencia.categoria_id)
+        if not cat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Categoria com ID {recorrencia.categoria_id} não encontrada."
+            )
     return crud.create_recorrencia(db=db, rec=recorrencia, usuario_id=current_user.id)
 
 
@@ -511,12 +514,13 @@ def atualizar_recorrencia(
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    cat = crud.get_categoria_by_id(db=db, categoria_id=recorrencia.categoria_id)
-    if not cat:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Categoria com ID {recorrencia.categoria_id} não encontrada."
-        )
+    if recorrencia.categoria_id is not None:
+        cat = crud.get_categoria_by_id(db=db, categoria_id=recorrencia.categoria_id)
+        if not cat:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Categoria com ID {recorrencia.categoria_id} não encontrada."
+            )
     atualizado = crud.update_recorrencia(db=db, recorrencia_id=recorrencia_id, rec=recorrencia, usuario_id=current_user.id)
     if not atualizado:
         raise HTTPException(

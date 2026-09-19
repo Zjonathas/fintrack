@@ -115,11 +115,11 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
       setFeedback({ tipo: 'erro', msg: 'O valor deve ser positivo.' });
       return;
     }
-    if (!categoriaId) {
+    if (tipo === 'despesa' && !categoriaId) {
       setFeedback({ tipo: 'erro', msg: 'Selecione uma categoria.' });
       return;
     }
-    if (formaPagamento === 'credito' && !cartaoId) {
+    if (tipo === 'despesa' && formaPagamento === 'credito' && !cartaoId) {
       setFeedback({ tipo: 'erro', msg: 'Selecione um cartão de crédito.' });
       return;
     }
@@ -130,11 +130,11 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
       teve_entrega: tipo === 'despesa' ? teveEntrega : false,
       valor_entrega: tipo === 'despesa' && teveEntrega ? numEntrega : 0,
       data: data || hoje(),
-      categoria_id: Number(categoriaId),
+      categoria_id: tipo === 'despesa' ? Number(categoriaId) : null,
       tipo,
-      forma_pagamento: formaPagamento,
-      cartao_id: formaPagamento === 'credito' ? Number(cartaoId) : null,
-      total_parcelas: formaPagamento === 'credito' ? totalParcelas : 1,
+      forma_pagamento: tipo === 'despesa' ? formaPagamento : 'dinheiro',
+      cartao_id: tipo === 'despesa' && formaPagamento === 'credito' ? Number(cartaoId) : null,
+      total_parcelas: tipo === 'despesa' && formaPagamento === 'credito' ? totalParcelas : 1,
     };
 
     try {
@@ -146,8 +146,18 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
         resetForm();
         onClose();
       }, 900);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao registrar transação.';
+    } catch (err: any) {
+      let msg = 'Erro ao registrar transação.';
+      if (err?.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => `${d.loc?.slice(-1)[0] || 'Campo'}: ${d.msg}`).join(' | ');
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setFeedback({ tipo: 'erro', msg });
     } finally {
       setSubmetendo(false);
@@ -190,11 +200,10 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
         {/* Feedback visual */}
         {feedback && (
           <div
-            className={`mx-5 mt-4 p-3 rounded-lg text-xs flex items-center gap-2 ${
-              feedback.tipo === 'ok'
+            className={`mx-5 mt-4 p-3 rounded-lg text-xs flex items-center gap-2 ${feedback.tipo === 'ok'
                 ? 'bg-primary/10 text-primary border border-primary/20'
                 : 'bg-destructive/10 text-destructive border border-destructive/20'
-            }`}
+              }`}
           >
             {feedback.tipo === 'ok' ? (
               <CheckCircle size={16} weight="fill" className="shrink-0" />
@@ -214,11 +223,10 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
               <button
                 type="button"
                 onClick={() => { setTipo('despesa'); setTeveEntrega(false); setValorEntrega(''); }}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                  tipo === 'despesa'
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${tipo === 'despesa'
                     ? 'bg-card text-primary shadow-sm border border-border'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 <ArrowCircleDown size={14} weight="duotone" />
                 Despesa
@@ -226,11 +234,10 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
               <button
                 type="button"
                 onClick={() => { setTipo('receita'); setTeveEntrega(false); setFormaPagamento('dinheiro'); }}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${
-                  tipo === 'receita'
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${tipo === 'receita'
                     ? 'bg-card text-emerald-500 shadow-sm border border-border'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                  }`}
               >
                 <ArrowCircleUp size={14} weight="duotone" />
                 Receita
@@ -257,8 +264,8 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label htmlFor="modal-nova-valor" className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <CurrencyDollar size={14} className="text-primary" />
-                  Valor do Produto (R$) <span className="text-destructive">*</span>
+                  <CurrencyDollar size={14} className={tipo === 'receita' ? 'text-emerald-500' : 'text-primary'} />
+                  {tipo === 'receita' ? 'Valor da Receita (R$)' : 'Valor do Produto (R$)'} <span className="text-destructive">*</span>
                 </label>
                 <NumberInput
                   id="modal-nova-valor"
@@ -286,54 +293,56 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
               </div>
             </div>
 
-            {/* Categoria */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label htmlFor="modal-nova-categoria" className="flex items-center gap-1 text-xs font-medium text-foreground">
-                  <Tag size={14} className="text-primary" />
-                  <span>Categoria</span> <span className="text-destructive">*</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setCriarCat(!criarCat)}
-                  className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={12} weight="bold" />
-                  <span>{criarCat ? 'Cancelar' : 'Nova Categoria'}</span>
-                </button>
-              </div>
-
-              {criarCat && (
-                <div className="flex gap-2 p-2.5 rounded-lg bg-muted/40 border border-border animate-in fade-in duration-150">
-                  <input
-                    type="text"
-                    placeholder="Nome da nova categoria..."
-                    value={novaCat}
-                    onChange={(e) => setNovaCat(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                  />
+            {/* Categoria (apenas para Despesas) */}
+            {tipo === 'despesa' && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="modal-nova-categoria" className="flex items-center gap-1 text-xs font-medium text-foreground">
+                    <Tag size={14} className="text-primary" />
+                    <span>Categoria</span> <span className="text-destructive">*</span>
+                  </label>
                   <button
                     type="button"
-                    onClick={handleCriarCategoria}
-                    disabled={salvandoCat || !novaCat.trim()}
-                    className="px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-accent border border-border transition-colors disabled:opacity-50 cursor-pointer"
+                    onClick={() => setCriarCat(!criarCat)}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    {salvandoCat ? 'Criando...' : 'Salvar'}
+                    <Plus size={12} weight="bold" />
+                    <span>{criarCat ? 'Cancelar' : 'Nova Categoria'}</span>
                   </button>
                 </div>
-              )}
 
-              <Select
-                id="modal-nova-categoria"
-                value={categoriaId}
-                onChange={(val) => setCategoriaId(val ? Number(val) : '')}
-                placeholder="Selecione uma categoria..."
-                options={categorias.map((cat) => ({
-                  value: cat.id,
-                  label: cat.nome,
-                }))}
-              />
-            </div>
+                {criarCat && (
+                  <div className="flex gap-2 p-2.5 rounded-lg bg-muted/40 border border-border animate-in fade-in duration-150">
+                    <input
+                      type="text"
+                      placeholder="Nome da nova categoria..."
+                      value={novaCat}
+                      onChange={(e) => setNovaCat(e.target.value)}
+                      className="flex-1 px-3 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCriarCategoria}
+                      disabled={salvandoCat || !novaCat.trim()}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-accent border border-border transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {salvandoCat ? 'Criando...' : 'Salvar'}
+                    </button>
+                  </div>
+                )}
+
+                <Select
+                  id="modal-nova-categoria"
+                  value={categoriaId}
+                  onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+                  placeholder="Selecione uma categoria..."
+                  options={categorias.map((cat) => ({
+                    value: cat.id,
+                    label: cat.nome,
+                  }))}
+                />
+              </div>
+            )}
 
             {/* Forma de Pagamento (apenas para Despesas) */}
             {tipo === 'despesa' && (
@@ -348,11 +357,10 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                       key={forma}
                       type="button"
                       onClick={() => { setFormaPagamento(forma); if (forma !== 'credito') { setCartaoId(''); setTotalParcelas(1); } }}
-                      className={`py-1.5 px-2 rounded-md text-[11px] font-medium border transition-all capitalize cursor-pointer ${
-                        formaPagamento === forma
+                      className={`py-1.5 px-2 rounded-md text-[11px] font-medium border transition-all capitalize cursor-pointer ${formaPagamento === forma
                           ? 'bg-primary/10 border-primary/40 text-primary'
                           : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                      }`}
+                        }`}
                     >
                       {forma === 'credito' ? 'Crédito' : forma === 'debito' ? 'Débito' : forma === 'dinheiro' ? 'Dinheiro' : forma === 'boleto' ? 'Boleto' : forma.charAt(0).toUpperCase() + forma.slice(1)}
                     </button>
@@ -379,16 +387,15 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-foreground">Número de parcelas</label>
                       <div className="flex gap-1.5 flex-wrap">
-                        {[1,2,3,4,5,6,7,8,9,10,12].map((n) => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12].map((n) => (
                           <button
                             key={n}
                             type="button"
                             onClick={() => setTotalParcelas(n)}
-                            className={`w-9 h-8 rounded-md text-xs font-medium border transition-all cursor-pointer ${
-                              totalParcelas === n
+                            className={`w-9 h-8 rounded-md text-xs font-medium border transition-all cursor-pointer ${totalParcelas === n
                                 ? 'bg-primary text-primary-foreground border-primary'
                                 : 'border-border text-muted-foreground hover:border-primary/50'
-                            }`}
+                              }`}
                           >
                             {n}x
                           </button>
@@ -410,11 +417,10 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
               <div className="pt-2 border-t border-border space-y-3">
                 <label
                   htmlFor="modal-nova-teve-entrega"
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                    teveEntrega
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${teveEntrega
                       ? 'bg-warning/5 border-warning/30 shadow-xs'
                       : 'border-border hover:bg-secondary/40'
-                  }`}
+                    }`}
                 >
                   <Checkbox
                     id="modal-nova-teve-entrega"

@@ -261,3 +261,57 @@ def test_cartao_fechamento_dia_29_vencimento_05(client: TestClient):
     assert datas[0] == "2026-04-05"
     assert datas[1] == "2026-05-05"
 
+
+def test_receita_apenas_valor_descricao_e_data(client: TestClient):
+    """Testa que receita pode ser criada sem categoria (apenas valor, descricao e data)."""
+    headers = get_authenticated_header(client, "receita_user@example.com")
+
+    # 1. Receita sem categoria_id deve ser aceita com sucesso (201)
+    resp = client.post(
+        "/api/transacoes",
+        headers=headers,
+        json={
+            "tipo": "receita",
+            "descricao": "Salário Mensal",
+            "valor_produto": 5500.0,
+            "data": "2026-03-05"
+        }
+    )
+    assert resp.status_code == 201
+    transacao = resp.json()
+    assert transacao["tipo"] == "receita"
+    assert transacao["descricao"] == "Salário Mensal"
+    assert transacao["valor_produto"] == 5500.0
+    assert transacao["categoria_id"] is None
+    assert transacao["categoria"] is None
+
+    # 2. Despesa sem categoria_id DEVE falhar com 422
+    resp_despesa = client.post(
+        "/api/transacoes",
+        headers=headers,
+        json={
+            "tipo": "despesa",
+            "descricao": "Almoço Sem Categoria",
+            "valor_produto": 50.0,
+            "data": "2026-03-05"
+        }
+    )
+    assert resp_despesa.status_code == 422
+
+    # 3. Recorrência de receita sem categoria deve ser aceita
+    resp_rec = client.post(
+        "/api/recorrencias",
+        headers=headers,
+        json={
+            "tipo": "receita",
+            "descricao": "Renda Passiva Dividendos",
+            "valor": 350.0,
+            "dia_vencimento": 10
+        }
+    )
+    assert resp_rec.status_code == 201
+    rec = resp_rec.json()
+    assert rec["tipo"] == "receita"
+    assert rec["categoria_id"] is None
+
+

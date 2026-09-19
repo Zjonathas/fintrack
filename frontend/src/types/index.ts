@@ -69,7 +69,7 @@ export interface Transacao {
   teve_entrega: boolean;
   valor_entrega: number;
   data: string;
-  categoria_id: number;
+  categoria_id?: number | null;
   usuario_id?: number;
   tipo: TipoTransacao;
   forma_pagamento: FormaPagamento;
@@ -77,7 +77,7 @@ export interface Transacao {
   parcela_atual?: number | null;
   total_parcelas?: number | null;
   compra_parcelada_id?: string | null;
-  categoria?: Categoria;
+  categoria?: Categoria | null;
   cartao?: CartaoCredito | null;
   valor_total: number;
 }
@@ -89,7 +89,7 @@ export interface TransacaoCreatePayload {
   teve_entrega: boolean;
   valor_entrega?: number;
   data: string;
-  categoria_id: number;
+  categoria_id?: number | null;
   tipo: TipoTransacao;
   forma_pagamento: FormaPagamento;
   cartao_id?: number | null;
@@ -147,21 +147,21 @@ export interface TransacaoRecorrente {
   descricao: string;
   valor: number;
   tipo: TipoTransacao;
-  categoria_id: number;
+  categoria_id?: number | null;
   usuario_id: number;
   dia_vencimento: number;
   frequencia: string;
   ativa: boolean;
   observacao?: string | null;
   criado_em: string;
-  categoria?: Categoria;
+  categoria?: Categoria | null;
 }
 
 export interface TransacaoRecorrentePayload {
   descricao: string;
   valor: number;
   tipo: TipoTransacao;
-  categoria_id: number;
+  categoria_id?: number | null;
   dia_vencimento: number;
   frequencia?: string;
   observacao?: string;

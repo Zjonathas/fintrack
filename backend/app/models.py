@@ -67,7 +67,7 @@ class Transacao(Base):
     teve_entrega = Column(Boolean, default=False, nullable=False)
     valor_entrega = Column(Float, nullable=True, default=0.0)
     data = Column(Date, default=date.today, nullable=False, index=True)
-    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="CASCADE"), nullable=False, index=True)
+    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="SET NULL"), nullable=True, index=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Natureza e forma de pagamento
@@ -109,7 +109,7 @@ class TransacaoRecorrente(Base):
     descricao = Column(String(255), nullable=False)
     valor = Column(Float, nullable=False)
     tipo = Column(String(20), nullable=False, index=True)   # "receita" | "despesa"
-    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="CASCADE"), nullable=False, index=True)
+    categoria_id = Column(Integer, ForeignKey("categorias.id", ondelete="SET NULL"), nullable=True, index=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True)
     dia_vencimento = Column(Integer, nullable=False)         # Dia do mes (1-31)
     frequencia = Column(String(20), default="mensal", nullable=False)
