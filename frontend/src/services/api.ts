@@ -2,13 +2,19 @@ import axios from 'axios';
 import {
   AuthResponse,
   BulkDeleteResponse,
+  CartaoCredito,
+  CartaoCreditoPayload,
+  FaturaCartaoResumo,
   Categoria,
   FiltrosTransacao,
+  FluxoCaixaProjecao,
   LoginPayload,
   RegisterPayload,
   ResumoAnalitico,
   Transacao,
   TransacaoCreatePayload,
+  TransacaoRecorrente,
+  TransacaoRecorrentePayload,
   TransacaoUpdatePayload,
   Usuario,
 } from '../types';
@@ -74,7 +80,7 @@ export const apiService = {
 
   // Transações
   async getTransacoes(filtros?: FiltrosTransacao): Promise<Transacao[]> {
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
 
     if (filtros) {
       if (filtros.categoria_id !== undefined && filtros.categoria_id !== '') {
@@ -91,6 +97,12 @@ export const apiService = {
       }
       if (filtros.busca && filtros.busca.trim() !== '') {
         params.busca = filtros.busca.trim();
+      }
+      if (filtros.tipo !== undefined && filtros.tipo !== '') {
+        params.tipo = filtros.tipo;
+      }
+      if (filtros.cartao_id !== undefined && filtros.cartao_id !== '') {
+        params.cartao_id = filtros.cartao_id;
       }
     }
 
@@ -117,9 +129,65 @@ export const apiService = {
     return response.data;
   },
 
-  // Dashboard & Métricas
   async getResumoDashboard(): Promise<ResumoAnalitico> {
     const response = await api.get<ResumoAnalitico>('/dashboard/resumo');
+    return response.data;
+  },
+
+  async getFluxoCaixa(mesReferencia?: string): Promise<FluxoCaixaProjecao> {
+    const params = mesReferencia ? { mes_referencia: mesReferencia } : {};
+    const response = await api.get<FluxoCaixaProjecao>('/dashboard/fluxo-caixa', { params });
+    return response.data;
+  },
+
+  // Cartoes de Credito
+  async getCartoes(): Promise<CartaoCredito[]> {
+    const response = await api.get<CartaoCredito[]>('/cartoes');
+    return response.data;
+  },
+
+  async criarCartao(payload: CartaoCreditoPayload): Promise<CartaoCredito> {
+    const response = await api.post<CartaoCredito>('/cartoes', payload);
+    return response.data;
+  },
+
+  async atualizarCartao(id: number, payload: CartaoCreditoPayload): Promise<CartaoCredito> {
+    const response = await api.put<CartaoCredito>(`/cartoes/${id}`, payload);
+    return response.data;
+  },
+
+  async deletarCartao(id: number): Promise<void> {
+    await api.delete(`/cartoes/${id}`);
+  },
+
+  async getFaturaCartao(cartaoId: number, mesReferencia?: string): Promise<FaturaCartaoResumo> {
+    const params = mesReferencia ? { mes_referencia: mesReferencia } : {};
+    const response = await api.get<FaturaCartaoResumo>(`/cartoes/${cartaoId}/fatura`, { params });
+    return response.data;
+  },
+
+  // Recorrencias
+  async getRecorrencias(): Promise<TransacaoRecorrente[]> {
+    const response = await api.get<TransacaoRecorrente[]>('/recorrencias');
+    return response.data;
+  },
+
+  async criarRecorrencia(payload: TransacaoRecorrentePayload): Promise<TransacaoRecorrente> {
+    const response = await api.post<TransacaoRecorrente>('/recorrencias', payload);
+    return response.data;
+  },
+
+  async atualizarRecorrencia(id: number, payload: TransacaoRecorrentePayload): Promise<TransacaoRecorrente> {
+    const response = await api.put<TransacaoRecorrente>(`/recorrencias/${id}`, payload);
+    return response.data;
+  },
+
+  async deletarRecorrencia(id: number): Promise<void> {
+    await api.delete(`/recorrencias/${id}`);
+  },
+
+  async toggleRecorrencia(id: number): Promise<TransacaoRecorrente> {
+    const response = await api.patch<TransacaoRecorrente>(`/recorrencias/${id}/toggle`);
     return response.data;
   },
 };

@@ -253,7 +253,7 @@ def test_password_strength_requirements(client):
         json={"nome": "Sem Maiuscula", "email": "minuscula@exemplo.com", "senha": "senhaminuscula@1"}
     )
     assert resp.status_code == 422
-    assert "maiúscula" in resp.text
+    assert "maiuscula" in resp.text.lower()
 
     # 3. Sem letra minúscula
     resp = client.post(
@@ -261,7 +261,7 @@ def test_password_strength_requirements(client):
         json={"nome": "Sem Minuscula", "email": "maiuscula@exemplo.com", "senha": "SENHAMAIUSCULA@1"}
     )
     assert resp.status_code == 422
-    assert "minúscula" in resp.text
+    assert "minuscula" in resp.text.lower()
 
     # 4. Sem número
     resp = client.post(
@@ -269,7 +269,7 @@ def test_password_strength_requirements(client):
         json={"nome": "Sem Numero", "email": "numero@exemplo.com", "senha": "SenhaSemNumero@!"}
     )
     assert resp.status_code == 422
-    assert "número" in resp.text
+    assert "numero" in resp.text.lower()
 
     # 5. Sem caractere especial
     resp = client.post(
@@ -285,7 +285,7 @@ def test_password_strength_requirements(client):
         json={"nome": "Com Espaco", "email": "espaco@exemplo.com", "senha": "Senha Com Espaco@123"}
     )
     assert resp.status_code == 422
-    assert "espaços" in resp.text
+    assert "espaco" in resp.text.lower()
 
     # 7. Senha válida completa
     resp = client.post(

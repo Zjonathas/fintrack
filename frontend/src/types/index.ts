@@ -27,6 +27,41 @@ export interface Categoria {
   nome: string;
 }
 
+export type TipoTransacao = 'receita' | 'despesa';
+export type FormaPagamento = 'dinheiro' | 'pix' | 'debito' | 'credito' | 'boleto' | 'outro';
+
+export interface CartaoCredito {
+  id: number;
+  nome: string;
+  bandeira?: string;
+  limite: number;
+  dia_fechamento: number;
+  dia_vencimento: number;
+  cor: string;
+  usuario_id: number;
+  criado_em: string;
+}
+
+export interface CartaoCreditoPayload {
+  nome: string;
+  bandeira?: string;
+  limite: number;
+  dia_fechamento: number;
+  dia_vencimento: number;
+  cor?: string;
+}
+
+export interface FaturaCartaoResumo {
+  cartao_id: number;
+  cartao_nome: string;
+  mes_referencia: string;
+  total_fatura: number;
+  limite_utilizado: number;
+  limite_disponivel: number;
+  percentual_utilizado: number;
+  qtd_parcelas_abertas: number;
+}
+
 export interface Transacao {
   id: number;
   descricao: string;
@@ -36,7 +71,14 @@ export interface Transacao {
   data: string;
   categoria_id: number;
   usuario_id?: number;
+  tipo: TipoTransacao;
+  forma_pagamento: FormaPagamento;
+  cartao_id?: number | null;
+  parcela_atual?: number | null;
+  total_parcelas?: number | null;
+  compra_parcelada_id?: string | null;
   categoria?: Categoria;
+  cartao?: CartaoCredito | null;
   valor_total: number;
 }
 
@@ -48,6 +90,10 @@ export interface TransacaoCreatePayload {
   valor_entrega?: number;
   data: string;
   categoria_id: number;
+  tipo: TipoTransacao;
+  forma_pagamento: FormaPagamento;
+  cartao_id?: number | null;
+  total_parcelas?: number;
 }
 
 export type TransacaoUpdatePayload = TransacaoCreatePayload;
@@ -80,6 +126,9 @@ export interface ResumoAnalitico {
   qtd_transacoes: number;
   qtd_com_entrega: number;
   qtd_sem_entrega: number;
+  total_receitas: number;
+  total_despesas: number;
+  saldo_liquido: number;
   gastos_por_categoria: GastoPorCategoria[];
 }
 
@@ -89,4 +138,48 @@ export interface FiltrosTransacao {
   data_inicio?: string;
   data_fim?: string;
   busca?: string;
+  tipo?: TipoTransacao | '';
+  cartao_id?: number | '';
+}
+
+export interface TransacaoRecorrente {
+  id: number;
+  descricao: string;
+  valor: number;
+  tipo: TipoTransacao;
+  categoria_id: number;
+  usuario_id: number;
+  dia_vencimento: number;
+  frequencia: string;
+  ativa: boolean;
+  observacao?: string | null;
+  criado_em: string;
+  categoria?: Categoria;
+}
+
+export interface TransacaoRecorrentePayload {
+  descricao: string;
+  valor: number;
+  tipo: TipoTransacao;
+  categoria_id: number;
+  dia_vencimento: number;
+  frequencia?: string;
+  observacao?: string;
+}
+
+export interface ItemProjecaoMensal {
+  descricao: string;
+  valor: number;
+  tipo: TipoTransacao;
+  origem: 'recorrencia' | 'parcela_cartao';
+  categoria_nome?: string | null;
+  cartao_nome?: string | null;
+}
+
+export interface FluxoCaixaProjecao {
+  mes_referencia: string;
+  total_receitas_projetadas: number;
+  total_despesas_projetadas: number;
+  saldo_projetado: number;
+  itens: ItemProjecaoMensal[];
 }

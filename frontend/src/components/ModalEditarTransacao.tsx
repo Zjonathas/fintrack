@@ -90,6 +90,9 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
       valor_entrega: teveEntrega ? numEntrega : 0,
       data: data || transacao.data,
       categoria_id: Number(categoriaId),
+      tipo: transacao.tipo,
+      forma_pagamento: transacao.forma_pagamento,
+      cartao_id: transacao.cartao_id ?? null,
     };
 
     try {

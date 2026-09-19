@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Finanças Pessoais API",
     description="API para gestão e controle de despesas pessoais, identificação de maiores gastos, análise de economia e autenticação JWT.",
-    version="1.1.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -213,6 +213,8 @@ def listar_transacoes(
     data_inicio: Optional[date] = Query(None, description="Data de início do período (YYYY-MM-DD)"),
     data_fim: Optional[date] = Query(None, description="Data final do período (YYYY-MM-DD)"),
     busca: Optional[str] = Query(None, description="Termo de busca na descrição da transação"),
+    tipo: Optional[str] = Query(None, description="Filtrar por tipo: 'receita' ou 'despesa'"),
+    cartao_id: Optional[int] = Query(None, description="Filtrar por ID do cartão de crédito"),
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=500),
     current_user: models.Usuario = Depends(auth.get_current_user),
@@ -226,6 +228,8 @@ def listar_transacoes(
         data_inicio=data_inicio,
         data_fim=data_fim,
         busca=busca,
+        tipo=tipo,
+        cartao_id=cartao_id,
         skip=skip,
         limit=limit
     )
@@ -347,3 +351,231 @@ def obter_resumo_dashboard(
     db: Session = Depends(get_db)
 ):
     return crud.get_resumo_analitico(db=db, usuario_id=current_user.id)
+
+
+@app.get(
+    "/api/dashboard/fluxo-caixa",
+    response_model=schemas.FluxoCaixaProjecao,
+    tags=["Dashboard"],
+    summary="Projeção de fluxo de caixa para o próximo mês"
+)
+def obter_fluxo_caixa(
+    mes_referencia: Optional[str] = Query(None, description="Mês de referência no formato YYYY-MM. Padrão: próximo mês."),
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.get_fluxo_caixa_projecao(db=db, usuario_id=current_user.id, mes_referencia=mes_referencia)
+
+
+# ==========================================
+# Endpoints de Cartões de Crédito (Protegidos)
+# ==========================================
+
+@app.get(
+    "/api/cartoes",
+    response_model=List[schemas.CartaoCreditoResponse],
+    tags=["Cartões"],
+    summary="Listar cartões de crédito do usuário"
+)
+def listar_cartoes(
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.get_cartoes(db=db, usuario_id=current_user.id)
+
+
+@app.post(
+    "/api/cartoes",
+    response_model=schemas.CartaoCreditoResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Cartões"],
+    summary="Cadastrar novo cartão de crédito"
+)
+def criar_cartao(
+    cartao: schemas.CartaoCreditoCreate,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.create_cartao(db=db, cartao=cartao, usuario_id=current_user.id)
+
+
+@app.put(
+    "/api/cartoes/{cartao_id}",
+    response_model=schemas.CartaoCreditoResponse,
+    tags=["Cartões"],
+    summary="Atualizar dados do cartão de crédito"
+)
+def atualizar_cartao(
+    cartao_id: int,
+    cartao: schemas.CartaoCreditoUpdate,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    atualizado = crud.update_cartao(db=db, cartao_id=cartao_id, cartao=cartao, usuario_id=current_user.id)
+    if not atualizado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cartão com ID {cartao_id} não encontrado ou não pertence a este usuário."
+        )
+    return atualizado
+
+
+@app.delete(
+    "/api/cartoes/{cartao_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Cartões"],
+    summary="Excluir cartão de crédito"
+)
+def remover_cartao(
+    cartao_id: int,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    sucesso = crud.delete_cartao(db=db, cartao_id=cartao_id, usuario_id=current_user.id)
+    if not sucesso:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cartão com ID {cartao_id} não encontrado ou não pertence a este usuário."
+        )
+    return None
+
+
+@app.get(
+    "/api/cartoes/{cartao_id}/fatura",
+    response_model=schemas.FaturaCartaoResumo,
+    tags=["Cartões"],
+    summary="Obter resumo da fatura do cartão para um mês específico"
+)
+def obter_fatura_cartao(
+    cartao_id: int,
+    mes_referencia: Optional[str] = Query(None, description="Mês de referência no formato YYYY-MM. Padrão: mês atual."),
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    resultado = crud.get_fatura_cartao(db=db, cartao_id=cartao_id, usuario_id=current_user.id, mes_referencia=mes_referencia)
+    if not resultado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Cartão com ID {cartao_id} não encontrado ou não pertence a este usuário."
+        )
+    return resultado
+
+
+# ==========================================
+# Endpoints de Transações Recorrentes (Protegidos)
+# ==========================================
+
+@app.get(
+    "/api/recorrencias",
+    response_model=List[schemas.TransacaoRecorrenteResponse],
+    tags=["Recorrências"],
+    summary="Listar transações recorrentes do usuário"
+)
+def listar_recorrencias(
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    return crud.get_recorrencias(db=db, usuario_id=current_user.id)
+
+
+@app.post(
+    "/api/recorrencias",
+    response_model=schemas.TransacaoRecorrenteResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Recorrências"],
+    summary="Cadastrar nova transação recorrente"
+)
+def criar_recorrencia(
+    recorrencia: schemas.TransacaoRecorrenteCreate,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    cat = crud.get_categoria_by_id(db=db, categoria_id=recorrencia.categoria_id)
+    if not cat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Categoria com ID {recorrencia.categoria_id} não encontrada."
+        )
+    return crud.create_recorrencia(db=db, rec=recorrencia, usuario_id=current_user.id)
+
+
+@app.put(
+    "/api/recorrencias/{recorrencia_id}",
+    response_model=schemas.TransacaoRecorrenteResponse,
+    tags=["Recorrências"],
+    summary="Atualizar transação recorrente"
+)
+def atualizar_recorrencia(
+    recorrencia_id: int,
+    recorrencia: schemas.TransacaoRecorrenteUpdate,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    cat = crud.get_categoria_by_id(db=db, categoria_id=recorrencia.categoria_id)
+    if not cat:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Categoria com ID {recorrencia.categoria_id} não encontrada."
+        )
+    atualizado = crud.update_recorrencia(db=db, recorrencia_id=recorrencia_id, rec=recorrencia, usuario_id=current_user.id)
+    if not atualizado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Recorrência com ID {recorrencia_id} não encontrada ou não pertence a este usuário."
+        )
+    return atualizado
+
+
+@app.delete(
+    "/api/recorrencias/{recorrencia_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Recorrências"],
+    summary="Excluir transação recorrente"
+)
+def remover_recorrencia(
+    recorrencia_id: int,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    sucesso = crud.delete_recorrencia(db=db, recorrencia_id=recorrencia_id, usuario_id=current_user.id)
+    if not sucesso:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Recorrência com ID {recorrencia_id} não encontrada ou não pertence a este usuário."
+        )
+    return None
+
+
+@app.patch(
+    "/api/recorrencias/{recorrencia_id}/toggle",
+    response_model=schemas.TransacaoRecorrenteResponse,
+    tags=["Recorrências"],
+    summary="Ativar ou desativar uma transação recorrente"
+)
+def toggle_recorrencia(
+    recorrencia_id: int,
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    resultado = crud.toggle_recorrencia(db=db, recorrencia_id=recorrencia_id, usuario_id=current_user.id)
+    if not resultado:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Recorrência com ID {recorrencia_id} não encontrada ou não pertence a este usuário."
+        )
+    return resultado
+
+
+@app.post(
+    "/api/recorrencias/processar",
+    tags=["Recorrências"],
+    summary="Gerar lançamentos de transações a partir das recorrências ativas no mês"
+)
+def processar_recorrencias(
+    ano: int = Query(..., ge=2000, le=2100),
+    mes: int = Query(..., ge=1, le=12),
+    current_user: models.Usuario = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    geradas = crud.processar_recorrencias_do_mes(db=db, usuario_id=current_user.id, ano=ano, mes=mes)
+    return {"ano": ano, "mes": mes, "geradas": geradas}

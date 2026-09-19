@@ -7,7 +7,7 @@ import {
   Truck,
   CalendarBlank,
 } from '@phosphor-icons/react';
-import { Categoria, FiltrosTransacao } from '../types';
+import { Categoria, FiltrosTransacao, TipoTransacao } from '../types';
 import { Select } from './Select';
 import { DatePicker } from './DatePicker';
 
@@ -31,7 +31,8 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
     (filtros.categoria_id !== '' && filtros.categoria_id !== undefined) ||
     (filtros.teve_entrega !== '' && filtros.teve_entrega !== undefined) ||
     Boolean(filtros.data_inicio) ||
-    Boolean(filtros.data_fim);
+    Boolean(filtros.data_fim) ||
+    (filtros.tipo !== '' && filtros.tipo !== undefined);
 
   return (
     <div className="card p-4 space-y-3">
@@ -118,6 +119,29 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
               { value: '', label: 'Todos os status' },
               { value: 'true', label: 'Apenas c/ taxa de entrega' },
               { value: 'false', label: 'Apenas s/ taxa de entrega' },
+            ]}
+          />
+        </div>
+
+        {/* Filtro Tipo */}
+        <div>
+          <label htmlFor="filtro-tipo" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+            <span className="w-3 h-3 rounded-full bg-primary/60 inline-block" />
+            <span>Tipo</span>
+          </label>
+          <Select
+            id="filtro-tipo"
+            value={filtros.tipo ?? ''}
+            onChange={(val) =>
+              onFiltroChange({
+                ...filtros,
+                tipo: val === '' ? '' : (val as TipoTransacao),
+              })
+            }
+            options={[
+              { value: '', label: 'Receitas e Despesas' },
+              { value: 'receita', label: 'Apenas Receitas' },
+              { value: 'despesa', label: 'Apenas Despesas' },
             ]}
           />
         </div>

@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Wallet,
-  Package,
   Truck,
-  Receipt,
   ArrowsClockwise,
   ChartPieSlice,
   ChartBar,
   TrendUp,
   Coins,
+  ArrowCircleUp,
+  ArrowCircleDown,
 } from '@phosphor-icons/react';
 import {
   ResponsiveContainer,
@@ -147,38 +146,45 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
     qtd_com_entrega,
     qtd_sem_entrega,
     gastos_por_categoria,
+    total_receitas = 0,
+    total_despesas = total_geral,
+    saldo_liquido = 0,
   } = resumo;
 
   const percProdutos = total_geral > 0 ? ((total_produtos / total_geral) * 100).toFixed(1) : '100';
 
   const kpis = [
     {
-      label: 'Gasto Total',
-      value: formatBRL(total_geral),
-      detail: `${qtd_transacoes} transações registradas`,
-      icon: <Wallet size={20} className="text-foreground" weight="duotone" />,
-      border: 'border-border',
+      label: 'Saldo Líquido',
+      value: formatBRL(saldo_liquido),
+      detail: saldo_liquido >= 0 ? 'Superávit no período' : 'Déficit no período',
+      icon: saldo_liquido >= 0 ? <ArrowCircleUp size={20} className="text-emerald-500" weight="duotone" /> : <ArrowCircleDown size={20} className="text-rose-500" weight="duotone" />,
+      border: saldo_liquido >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30',
+      valueClass: saldo_liquido >= 0 ? 'text-emerald-500' : 'text-rose-500',
     },
     {
-      label: 'Em Produtos',
-      value: formatBRL(total_produtos),
-      detail: `${percProdutos}% do montante total`,
-      icon: <Package size={20} className="text-primary" weight="duotone" />,
-      border: 'border-border',
+      label: 'Total Receitas',
+      value: formatBRL(total_receitas),
+      detail: 'Entradas de caixa registradas',
+      icon: <ArrowCircleUp size={20} className="text-emerald-500" weight="duotone" />,
+      border: 'border-emerald-500/20',
+      valueClass: 'text-emerald-500',
+    },
+    {
+      label: 'Total Despesas',
+      value: formatBRL(total_despesas),
+      detail: `${qtd_transacoes} saídas registradas`,
+      icon: <ArrowCircleDown size={20} className="text-rose-500" weight="duotone" />,
+      border: 'border-rose-500/20',
+      valueClass: 'text-rose-500',
     },
     {
       label: 'Taxas de Entrega',
       value: formatBRL(total_entregas),
-      detail: `${percentual_entregas}% do total gasto`,
+      detail: `${percentual_entregas}% dos gastos · Média ${formatBRL(media_valor_entrega)} (${qtd_com_entrega} c/ frete, ${qtd_sem_entrega} s/)`,
       icon: <Truck size={20} className="text-warning" weight="duotone" />,
       border: 'border-warning/30',
-    },
-    {
-      label: 'Média por Frete',
-      value: formatBRL(media_valor_entrega),
-      detail: `${qtd_com_entrega} c/ frete · ${qtd_sem_entrega} s/ frete`,
-      icon: <Receipt size={20} className="text-muted-foreground" weight="duotone" />,
-      border: 'border-border',
+      valueClass: 'text-foreground',
     },
   ];
 
@@ -265,7 +271,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
               <div className="p-1.5 rounded-md bg-secondary/80">{kpi.icon}</div>
             </div>
             <div>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{kpi.value}</p>
+              <p className={`text-2xl font-bold tabular-nums ${kpi.valueClass || 'text-foreground'}`}>{kpi.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{kpi.detail}</p>
             </div>
           </div>

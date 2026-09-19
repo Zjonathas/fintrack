@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Receipt, Truck, TrashSimple, PencilSimple, CheckSquare } from '@phosphor-icons/react';
+import {
+  TrashSimple,
+  Receipt,
+  Truck,
+  PencilSimple,
+  CheckSquare,
+  ArrowCircleUp,
+  ArrowCircleDown,
+  CreditCard,
+} from '@phosphor-icons/react';
 import { Transacao } from '../types';
 import { Checkbox } from './Checkbox';
 
@@ -181,8 +190,27 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
                       />
                     </div>
                   </td>
-                  <td className="py-3 px-4 font-medium text-foreground max-w-[200px] truncate">
-                    <span title={t.descricao}>{t.descricao}</span>
+                  <td className="py-3 px-4 font-medium text-foreground max-w-[240px]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {t.tipo === 'receita' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded shrink-0">
+                          <ArrowCircleUp size={13} weight="fill" />
+                          Receita
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded shrink-0">
+                          <ArrowCircleDown size={13} weight="fill" />
+                          Despesa
+                        </span>
+                      )}
+                      <span className="truncate" title={t.descricao}>{t.descricao}</span>
+                      {t.forma_pagamento === 'credito' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-500 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded shrink-0">
+                          <CreditCard size={11} weight="bold" />
+                          {t.total_parcelas && t.total_parcelas > 1 ? `${t.parcela_atual}/${t.total_parcelas}x` : 'Crédito'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground">
@@ -205,8 +233,16 @@ export const ListaTransacoes: React.FC<ListaTransacoesProps> = ({
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right tabular-nums font-semibold text-foreground">
-                    {formatBRL(t.valor_total)}
+                  <td className="py-3 px-4 text-right tabular-nums font-semibold">
+                    {t.tipo === 'receita' ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        +{formatBRL(t.valor_total)}
+                      </span>
+                    ) : (
+                      <span className="text-foreground">
+                        -{formatBRL(t.valor_total)}
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <div className="flex items-center justify-center gap-1">
