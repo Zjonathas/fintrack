@@ -106,6 +106,9 @@ Financas/
 Requer [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/) instalados.
 
 ```bash
+# Copiar arquivo de variáveis de ambiente (opcional, defaults seguros já inclusos)
+cp .env.example .env
+
 docker compose up --build
 ```
 
