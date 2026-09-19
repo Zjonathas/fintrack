@@ -56,7 +56,7 @@ export const ModalCartao: React.FC<ModalCartaoProps> = ({ isOpen, onClose, carta
     e.preventDefault();
     setFeedback(null);
 
-    const numLimite = parseFloat(limite.replace(',', '.')) || 0;
+    const numLimite = parseFloat(limite.replace(/\./g, '').replace(',', '.')) || 0;
     const numFechamento = parseInt(diaFechamento, 10);
     const numVencimento = parseInt(diaVencimento, 10);
 
@@ -97,8 +97,18 @@ export const ModalCartao: React.FC<ModalCartaoProps> = ({ isOpen, onClose, carta
       }
       onSalvo();
       setTimeout(() => onClose(), 800);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao salvar cartão.';
+    } catch (err: any) {
+      let msg = 'Erro ao salvar cartão.';
+      if (err?.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => `${d.loc?.slice(-1)[0] || 'Campo'}: ${d.msg}`).join(' | ');
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setFeedback({ tipo: 'erro', msg });
     } finally {
       setSubmetendo(false);

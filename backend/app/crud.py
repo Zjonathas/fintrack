@@ -176,23 +176,32 @@ def delete_cartao(db: Session, cartao_id: int, usuario_id: int) -> bool:
 def _calcular_data_primeira_parcela(data_compra: date, cartao: models.CartaoCredito) -> date:
     """
     Regra do melhor dia de compra:
-    - Se compra ANTES do fechamento -> parcela vence no mes ATUAL
-    - Se compra NO ou APOS o fechamento -> parcela vence no proximo mes
+    - Se compra ANTES do fechamento -> entra na fatura que fecha no mes atual
+    - Se compra NO ou APOS o fechamento -> entra na fatura que fecha no proximo mes
+    Se dia_vencimento < dia_fechamento (ex: fecha dia 29, vence dia 05),
+    o vencimento da fatura ocorre no mes seguinte ao do fechamento.
     """
     if data_compra.day < cartao.dia_fechamento:
-        # Parcela no mes atual
-        ano, mes = data_compra.year, data_compra.month
+        ano_fechamento, mes_fechamento = data_compra.year, data_compra.month
     else:
-        # Parcela no proximo mes
         if data_compra.month == 12:
-            ano, mes = data_compra.year + 1, 1
+            ano_fechamento, mes_fechamento = data_compra.year + 1, 1
         else:
-            ano, mes = data_compra.year, data_compra.month + 1
+            ano_fechamento, mes_fechamento = data_compra.year, data_compra.month + 1
+
+    if cartao.dia_vencimento < cartao.dia_fechamento:
+        # Vencimento ocorre no mes seguinte ao do fechamento da fatura
+        if mes_fechamento == 12:
+            ano_venc, mes_venc = ano_fechamento + 1, 1
+        else:
+            ano_venc, mes_venc = ano_fechamento, mes_fechamento + 1
+    else:
+        ano_venc, mes_venc = ano_fechamento, mes_fechamento
 
     # Ajusta dia de vencimento se ultrapassar o ultimo dia do mes
-    ultimo_dia = monthrange(ano, mes)[1]
+    ultimo_dia = monthrange(ano_venc, mes_venc)[1]
     dia = min(cartao.dia_vencimento, ultimo_dia)
-    return date(ano, mes, dia)
+    return date(ano_venc, mes_venc, dia)
 
 
 def _avancar_mes(dt: date) -> date:

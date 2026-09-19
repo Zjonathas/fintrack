@@ -214,3 +214,50 @@ def test_recorrencias_lifecycle(client: TestClient):
     assert len(extrato) >= 1
     assert extrato[0]["data"] == "2026-04-15"
     assert extrato[0]["valor_total"] == 120.0
+
+
+def test_cartao_fechamento_dia_29_vencimento_05(client: TestClient):
+    """Testa cadastro de cartão com fechamento 29 e vencimento 05 (ex: Mercado Pago)."""
+    headers = get_authenticated_header(client, "mercadopago_test@example.com")
+
+    resp = client.post(
+        "/api/cartoes",
+        headers=headers,
+        json={
+            "nome": "Mercado Pago",
+            "bandeira": "Visa",
+            "limite": 5000.0,
+            "dia_fechamento": 29,
+            "dia_vencimento": 5,
+            "cor": "#3b82f6"
+        }
+    )
+    assert resp.status_code == 201
+    cartao = resp.json()
+    assert cartao["nome"] == "Mercado Pago"
+    assert cartao["dia_fechamento"] == 29
+    assert cartao["dia_vencimento"] == 5
+
+    # Compra parcelada antes do fechamento (dia 15 de março) -> fatura fecha 29 de março, vence 5 de abril
+    resp_t = client.post(
+        "/api/transacoes",
+        headers=headers,
+        json={
+            "descricao": "Supermercado MP",
+            "valor_produto": 200.0,
+            "teve_entrega": False,
+            "valor_entrega": 0.0,
+            "data": "2026-03-15",
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao["id"],
+            "total_parcelas": 2
+        }
+    )
+    assert resp_t.status_code == 201
+    transacoes = client.get(f"/api/transacoes?cartao_id={cartao['id']}", headers=headers).json()
+    assert len(transacoes) == 2
+    datas = sorted([t["data"] for t in transacoes])
+    assert datas[0] == "2026-04-05"
+    assert datas[1] == "2026-05-05"
+

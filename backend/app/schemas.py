@@ -76,8 +76,8 @@ class CartaoCreditoBase(BaseModel):
     nome: str = Field(..., min_length=1, max_length=100, description='Nome do cartao (ex: Nubank, Inter)')
     bandeira: Optional[str] = Field(None, max_length=50, description='Bandeira do cartao (Visa, Mastercard, Elo...)')
     limite: float = Field(..., gt=0, description='Limite total do cartao')
-    dia_fechamento: int = Field(..., ge=1, le=28, description='Dia do mes em que a fatura fecha')
-    dia_vencimento: int = Field(..., ge=1, le=28, description='Dia do mes em que a fatura vence')
+    dia_fechamento: int = Field(..., ge=1, le=31, description='Dia do mes em que a fatura fecha')
+    dia_vencimento: int = Field(..., ge=1, le=31, description='Dia do mes em que a fatura vence')
     cor: Optional[str] = Field(default='#6366F1', max_length=20, description='Cor tematica do cartao (hex)')
 
 
@@ -89,8 +89,8 @@ class CartaoCreditoUpdate(BaseModel):
     nome: Optional[str] = Field(None, min_length=1, max_length=100)
     bandeira: Optional[str] = Field(None, max_length=50)
     limite: Optional[float] = Field(None, gt=0)
-    dia_fechamento: Optional[int] = Field(None, ge=1, le=28)
-    dia_vencimento: Optional[int] = Field(None, ge=1, le=28)
+    dia_fechamento: Optional[int] = Field(None, ge=1, le=31)
+    dia_vencimento: Optional[int] = Field(None, ge=1, le=31)
     cor: Optional[str] = Field(None, max_length=20)
 
 
