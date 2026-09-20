@@ -148,12 +148,17 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150"
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submetendo) onClose();
       }}
     >
-      <div className="bg-card border border-border rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[88vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+        {/* Indicador visual de arrasto no topo para mobile */}
+        <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center bg-card shrink-0">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+
         {/* Header do Modal com Abas */}
         <div className="p-4 sm:p-5 border-b border-border bg-card">
           <div className="flex items-center justify-between mb-4">
@@ -176,7 +181,7 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
               type="button"
               onClick={onClose}
               disabled={submetendo}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 cursor-pointer"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
               title="Fechar (Esc)"
             >
               <X size={18} weight="bold" />
@@ -334,12 +339,12 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
             </div>
           )}
 
-          {/* Botão de Envio */}
-          <div className="pt-2">
+          {/* Botão de Envio Touch-Friendly e Safe Area */}
+          <div className="pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="submit"
               disabled={submetendo}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
             >
               {submetendo ? (
                 <span>Processando...</span>

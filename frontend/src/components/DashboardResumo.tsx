@@ -9,6 +9,8 @@ import {
   ArrowCircleUp,
   ArrowCircleDown,
   CalendarBlank,
+  CaretLeft,
+  CaretRight,
 } from '@phosphor-icons/react';
 import {
   ResponsiveContainer,
@@ -31,6 +33,7 @@ import { DatePicker } from './DatePicker';
 export type TipoPeriodo =
   | 'mes_atual'
   | 'mes_anterior'
+  | 'mes_especifico'
   | 'ultimos_30_dias'
   | 'ano_atual'
   | 'tudo'
@@ -48,25 +51,37 @@ interface DashboardResumoProps {
 const pad = (n: number) => String(n).padStart(2, '0');
 const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+export const MESES_NOMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 export const getIntervaloPeriodo = (
   tipo: TipoPeriodo,
   customIni?: string,
-  customFim?: string
+  customFim?: string,
+  ano?: number,
+  mes?: number
 ): { inicio?: string; fim?: string; rotulo: string } => {
   const agora = new Date();
-  const y = agora.getFullYear();
-  const m = agora.getMonth();
+  const y = ano !== undefined ? ano : agora.getFullYear();
+  const m = mes !== undefined ? mes : agora.getMonth();
 
   switch (tipo) {
     case 'mes_atual': {
-      const ini = new Date(y, m, 1);
-      const fim = new Date(y, m + 1, 0);
-      return { inicio: toISO(ini), fim: toISO(fim), rotulo: 'Este Mês' };
+      const ini = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: `${MESES_NOMES[agora.getMonth()]} de ${agora.getFullYear()}` };
     }
     case 'mes_anterior': {
-      const ini = new Date(y, m - 1, 1);
-      const fim = new Date(y, m, 0);
-      return { inicio: toISO(ini), fim: toISO(fim), rotulo: 'Mês Anterior' };
+      const ini = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth(), 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: `${MESES_NOMES[ini.getMonth()]} de ${ini.getFullYear()}` };
+    }
+    case 'mes_especifico': {
+      const ini = new Date(y, m, 1);
+      const fim = new Date(y, m + 1, 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: `${MESES_NOMES[m]} de ${y}` };
     }
     case 'ultimos_30_dias': {
       const ini = new Date(agora);
@@ -74,7 +89,7 @@ export const getIntervaloPeriodo = (
       return { inicio: toISO(ini), fim: toISO(agora), rotulo: 'Últimos 30 Dias' };
     }
     case 'ano_atual': {
-      return { inicio: `${y}-01-01`, fim: `${y}-12-31`, rotulo: `Ano de ${y}` };
+      return { inicio: `${agora.getFullYear()}-01-01`, fim: `${agora.getFullYear()}-12-31`, rotulo: `Ano de ${agora.getFullYear()}` };
     }
     case 'tudo': {
       return { inicio: undefined, fim: undefined, rotulo: 'Todo o Histórico' };
@@ -141,6 +156,8 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'geral' | 'categorias' | 'evolucao'>('geral');
   const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>('mes_atual');
+  const [anoRef, setAnoRef] = useState<number>(() => new Date().getFullYear());
+  const [mesRef, setMesRef] = useState<number>(() => new Date().getMonth());
   const [customInicio, setCustomInicio] = useState<string>(() => {
     const d = new Date();
     d.setDate(1);
@@ -151,10 +168,36 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
     getIntervaloPeriodo('mes_atual')
   );
 
+  const navegarMes = (delta: number) => {
+    let novoAno = anoRef;
+    let novoMes = mesRef + delta;
+    if (novoMes > 11) {
+      novoMes = 0;
+      novoAno += 1;
+    } else if (novoMes < 0) {
+      novoMes = 11;
+      novoAno -= 1;
+    }
+    setAnoRef(novoAno);
+    setMesRef(novoMes);
+    setTipoPeriodo('mes_especifico');
+
+    const range = getIntervaloPeriodo('mes_especifico', undefined, undefined, novoAno, novoMes);
+    setPeriodoAtivo(range);
+    onPeriodoChange?.(range.inicio, range.fim);
+  };
+
   const handleSelecionarPeriodo = (novoTipo: TipoPeriodo) => {
     setTipoPeriodo(novoTipo);
     if (novoTipo === 'customizado') {
       const range = getIntervaloPeriodo('customizado', customInicio, customFim);
+      setPeriodoAtivo(range);
+      onPeriodoChange?.(range.inicio, range.fim);
+    } else if (novoTipo === 'mes_atual') {
+      const agora = new Date();
+      setAnoRef(agora.getFullYear());
+      setMesRef(agora.getMonth());
+      const range = getIntervaloPeriodo('mes_atual');
       setPeriodoAtivo(range);
       onPeriodoChange?.(range.inicio, range.fim);
     } else {
@@ -278,62 +321,85 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho do Dashboard com controles de visualização */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Coins size={22} weight="duotone" className="text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro & KPIs</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Visão detalhada de onde seu dinheiro está sendo gasto e análise de economia
-          </p>
-
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Alternador de visualizações */}
-          <div className="flex items-center bg-secondary p-1 rounded-lg border border-border text-xs">
-            <button
-              onClick={() => setActiveTab('geral')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'geral'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ChartPieSlice size={14} weight="bold" />
-              Visão Geral
-            </button>
-            <button
-              onClick={() => setActiveTab('categorias')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'categorias'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ChartBar size={14} weight="bold" />
-              Categorias
-            </button>
-            <button
-              onClick={() => setActiveTab('evolucao')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'evolucao'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <TrendUp size={14} weight="bold" />
-              Evolução
-            </button>
+      {/* Cabeçalho do Dashboard com controles de visualização responsivos */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Título & Subtítulo + Botão Atualizar (no mobile) */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Coins size={22} weight="duotone" className="text-primary shrink-0" />
+              <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro & KPIs</h2>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Visão detalhada de onde seu dinheiro está sendo gasto e análise de economia
+            </p>
           </div>
 
+          {/* Botão Atualizar em telas pequenas (mobile) no canto superior */}
           <button
+            type="button"
             onClick={onRefresh}
             disabled={loading}
             title="Atualizar dados analíticos"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-card hover:bg-accent border border-border rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+            className="sm:hidden flex items-center justify-center p-2 text-muted-foreground hover:text-foreground bg-card hover:bg-accent border border-border rounded-xl transition-colors disabled:opacity-50 shrink-0 min-h-[36px] min-w-[36px] cursor-pointer shadow-2xs"
+          >
+            <ArrowsClockwise
+              size={16}
+              weight="bold"
+              className={loading ? 'animate-spin' : ''}
+            />
+          </button>
+        </div>
+
+        {/* Controles: Abas Segmented Control e Botão Atualizar (em telas maiores) */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Alternador de visualizações */}
+          <div className="grid grid-cols-3 sm:flex items-center bg-secondary/80 p-1 rounded-xl border border-border text-xs w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab('geral')}
+              className={`px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap text-center cursor-pointer ${
+                activeTab === 'geral'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ChartPieSlice size={15} weight={activeTab === 'geral' ? 'fill' : 'bold'} className="shrink-0" />
+              <span>Visão Geral</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('categorias')}
+              className={`px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap text-center cursor-pointer ${
+                activeTab === 'categorias'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ChartBar size={15} weight={activeTab === 'categorias' ? 'fill' : 'bold'} className="shrink-0" />
+              <span>Categorias</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('evolucao')}
+              className={`px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap text-center cursor-pointer ${
+                activeTab === 'evolucao'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <TrendUp size={15} weight={activeTab === 'evolucao' ? 'fill' : 'bold'} className="shrink-0" />
+              <span>Evolução</span>
+            </button>
+          </div>
+
+          {/* Botão Atualizar para sm+ */}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            title="Atualizar dados analíticos"
+            className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-card hover:bg-accent border border-border rounded-xl px-3 py-2 transition-colors disabled:opacity-50 shrink-0 cursor-pointer shadow-2xs"
           >
             <ArrowsClockwise
               size={14}
@@ -345,55 +411,115 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
         </div>
       </div>
 
-      {/* Seletor de Período dos Gráficos e KPIs */}
+      {/* Seletor de Período dos Gráficos e KPIs com Navegador Mensal Touch-Friendly */}
       <div className="bg-card border border-border rounded-xl p-3 sm:p-4 shadow-2xs space-y-3">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-              <CalendarBlank size={16} weight="duotone" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-foreground">Período de Análise:</span>
-                <span className="text-xs font-semibold text-primary">
-                  {getIntervaloPeriodo(tipoPeriodo, customInicio, customFim).rotulo}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          {/* Navegador Mensal com Setas (< Mês Ano >) */}
+          <div className="flex items-center justify-between sm:justify-start gap-1 sm:gap-2 bg-secondary/50 p-1 rounded-xl border border-border/70 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => navegarMes(-1)}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background active:scale-95 transition-all cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center shrink-0"
+              title="Mês anterior"
+              aria-label="Mês anterior"
+            >
+              <CaretLeft size={16} weight="bold" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('mes_atual')}
+              className="flex-1 sm:flex-initial px-3 py-1 rounded-lg flex items-center justify-center gap-2 hover:bg-background/80 transition-colors cursor-pointer text-center"
+              title="Ir para o mês atual"
+            >
+              <CalendarBlank size={16} weight="duotone" className="text-primary shrink-0" />
+              <div className="text-left">
+                <span className="text-xs sm:text-sm font-bold text-foreground block leading-tight">
+                  {periodoAtivo.rotulo}
                 </span>
+                {periodoAtivo.inicio && periodoAtivo.fim ? (
+                  <span className="text-[10px] text-muted-foreground block leading-none">
+                    {periodoAtivo.inicio.split('-').reverse().join('/')} a {periodoAtivo.fim.split('-').reverse().join('/')}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground block leading-none">Todo o histórico</span>
+                )}
               </div>
-              {periodoAtivo.inicio && periodoAtivo.fim ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {periodoAtivo.inicio.split('-').reverse().join('/')} até {periodoAtivo.fim.split('-').reverse().join('/')}
-                </p>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">Todo o histórico de registros</p>
-              )}
-            </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navegarMes(1)}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background active:scale-95 transition-all cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center shrink-0"
+              title="Próximo mês"
+              aria-label="Próximo mês"
+            >
+              <CaretRight size={16} weight="bold" />
+            </button>
           </div>
 
-          {/* Atalhos Rápidos (Pills) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 text-xs">
-            {(
-              [
-                { id: 'mes_atual', label: 'Este Mês' },
-                { id: 'mes_anterior', label: 'Mês Anterior' },
-                { id: 'ultimos_30_dias', label: '30 Dias' },
-                { id: 'ano_atual', label: 'Este Ano' },
-                { id: 'tudo', label: 'Tudo' },
-                { id: 'customizado', label: 'Personalizado' },
-              ] as const
-            ).map((opcao) => (
-              <button
-                key={opcao.id}
-                type="button"
-                onClick={() => handleSelecionarPeriodo(opcao.id)}
-                className={`px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
-                  tipoPeriodo === opcao.id
-                    ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
-                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
-                }`}
-              >
-                {opcao.label}
-              </button>
-            ))}
+          {/* Atalhos Rápidos de Período (Pills) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs -mx-1 px-1">
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('mes_atual')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'mes_atual' || (tipoPeriodo === 'mes_especifico' && mesRef === new Date().getMonth() && anoRef === new Date().getFullYear())
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Este Mês
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('ultimos_30_dias')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'ultimos_30_dias'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              30 Dias
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('ano_atual')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'ano_atual'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Este Ano
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('tudo')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'tudo'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Tudo
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('customizado')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'customizado'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Personalizado
+            </button>
           </div>
         </div>
 
@@ -402,7 +528,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3 border-t border-border/60 animate-in fade-in duration-150">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">De:</span>
-              <div className="w-36">
+              <div className="w-full sm:w-36">
                 <DatePicker
                   value={customInicio}
                   onChange={(val) => setCustomInicio(val)}
@@ -412,7 +538,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Até:</span>
-              <div className="w-36">
+              <div className="w-full sm:w-36">
                 <DatePicker
                   value={customFim}
                   onChange={(val) => setCustomFim(val)}
@@ -423,7 +549,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             <button
               type="button"
               onClick={handleAplicarCustomizado}
-              className="px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold border border-primary/20 transition-colors cursor-pointer self-start sm:self-auto"
+              className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs transition-colors cursor-pointer self-stretch sm:self-auto flex items-center justify-center"
             >
               Filtrar Gráficos
             </button>
@@ -431,22 +557,24 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
         )}
       </div>
 
-      {/* KPI Cards Estruturados */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards Estruturados com Tipografia Fluida */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className={`card p-4 space-y-2 border transition-all duration-200 hover:shadow-sm ${kpi.border}`}
+            className={`card p-3 sm:p-4 space-y-1 sm:space-y-2 border transition-all duration-200 hover:shadow-sm ${kpi.border}`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground tracking-wide uppercase truncate">
                 {kpi.label}
               </span>
-              <div className="p-1.5 rounded-md bg-secondary/80">{kpi.icon}</div>
+              <div className="p-1 sm:p-1.5 rounded-md bg-secondary/80 shrink-0">{kpi.icon}</div>
             </div>
             <div>
-              <p className={`text-2xl font-bold tabular-nums ${kpi.valueClass || 'text-foreground'}`}>{kpi.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{kpi.detail}</p>
+              <p className={`text-base sm:text-2xl font-bold tabular-nums truncate ${kpi.valueClass || 'text-foreground'}`} title={kpi.value}>
+                {kpi.value}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">{kpi.detail}</p>
             </div>
           </div>
         ))}
@@ -455,9 +583,9 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       {/* Barra de Proporção Produtos vs. Fretes */}
       {total_geral > 0 && (
         <div className="card p-4 space-y-2">
-          <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground gap-1.5 sm:gap-2">
             <span className="font-medium text-foreground">Composição do Orçamento</span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary" />
                 Produtos: <strong className="text-foreground">{percProdutos}%</strong> ({formatBRL(total_produtos)})
@@ -677,7 +805,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
                         key={cat.categoria_id}
                         className="p-3.5 rounded-lg border border-border/70 hover:bg-secondary/40 transition-colors"
                       >
-                        <div className="flex items-center justify-between text-sm mb-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm gap-1 sm:gap-2 mb-1.5">
                           <div className="flex items-center gap-2">
                             <span
                               className="w-3 h-3 rounded-full shrink-0"
@@ -686,7 +814,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
                             <span className="font-semibold text-foreground">{cat.categoria_nome}</span>
                             <span className="text-xs text-muted-foreground">({percTotal}%)</span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs tabular-nums">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs tabular-nums justify-between sm:justify-end">
                             <span className="text-muted-foreground">{cat.quantidade} compras</span>
                             {cat.total_entrega > 0 && (
                               <span className="text-warning font-medium">

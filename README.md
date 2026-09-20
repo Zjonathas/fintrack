@@ -1,47 +1,61 @@
-# FinançasApp &bull; Gestão Financeira Pessoal
+# 💰 FinançasApp &bull; Gestão Financeira Pessoal & WebApp (PWA)
 
-> Aplicativo web moderno para controle de finanças pessoais: registre suas despesas, acompanhe para onde vai seu dinheiro, identifique onde você mais gasta e encontre oportunidades reais para economizar.
+> Aplicativo web moderno e responsivo para controle de finanças pessoais: registre despesas e receitas, gerencie múltiplos cartões de crédito e assinaturas fixas, isole custos de entrega/frete e acompanhe para onde vai seu dinheiro através de gráficos e KPIs inteligentes. Instalável como **Progressive Web App (PWA)** no celular e computador.
 
 ---
 
-## 🎯 Proposta & Objetivo
+## 🎯 Proposta & Diferenciais
 
-Ter clareza sobre para onde vai o seu dinheiro é o primeiro passo para economizar e conquistar estabilidade financeira. O **FinançasApp** foi desenvolvido para transformar o registro de despesas em uma experiência simples, intuitiva e analítica:
+O **FinançasApp** foi concebido para transformar a organização financeira em um hábito simples, rápido e com experiência visual de alto nível:
 
-- 📊 **Onde você mais gasta**: Gráficos e indicadores que destacam as categorias de maior impacto no seu orçamento mensal.
-- 💡 **Oportunidades de economia**: Visão clara de custos fixos e variáveis para planejar onde é possível reduzir despesas.
-- 📦 **Detalhamento opcional de fretes**: Possibilidade de separar despesas de frete/delivery do custo do produto quando aplicável.
+- 📱 **Experiência Nativa no Smartphone**: Projetado com foco em UX mobile (*mobile-first*), trazendo barra inferior tátil (*thumb zone*), botão FAB de acesso rápido, modais *bottom sheet* e suporte a instalação como WebApp (PWA).
+- 💳 **Controle Inteligente de Cartões**: Acompanhe o limite utilizado vs. disponível em tempo real, datas de fechamento/vencimento de fatura e parcelamento automático de compras.
+- 🔁 **Previsibilidade com Contas Recorrentes**: Monitore salários, assinaturas e despesas fixas para saber exatamente quanto sobra no final do mês.
+- 📦 **Detalhamento Isolado de Frete**: Identifique o peso que taxas de entrega e delivery têm sobre o valor real dos produtos adquiridos.
+- 📊 **Dashboards Analíticos com Navegador Temporal**: Alterne entre meses instantaneamente com setas (`< Mês Ano >`) ou use filtros dinâmicos de 30 dias, ano vigente ou período personalizado.
 
 ---
 
 ## ✨ Funcionalidades Principais
 
-- 🔐 **Autenticação JWT & Isolamento Multi-usuário (Multi-tenant)**:
-  - Cadastro de novos usuários com validação estrita de e-mail e hashing seguro de senhas com `bcrypt`.
-  - Sessões stateless via tokens **JSON Web Token (JWT)** no padrão Bearer Token.
-  - **Isolamento Completo de Dados**: Cada usuário visualiza, cria, edita e exclui unicamente as suas transações e dados estatísticos no dashboard.
-- 💡 **Análise de Gastos & Economia**: Acompanhe o total gasto por categoria e no mês, identificando excessos e oportunidades de economia.
-- 📦 **Segregação Opcional de Frete**: Formulário reativo que permite separar o valor do produto da taxa de entrega para maior precisão financeira.
-- 📊 **Dashboards Interativos com Recharts**:
-  - **Distribuição por Categoria**: Gráfico Donut destacando as áreas de maior gasto com percentuais e valores absolutos.
-  - **Produto vs. Frete**: Gráfico de barras empilhadas para comparar gastos reais vs. taxas logísticas.
-  - **Evolução Histórica**: Gráfico de área temporal exibindo a curva de despesas diárias.
+### 📱 Progressive Web App (PWA) & Mobile UX
+- **Instalável no Smartphone e Desktop**: Opera em modo *standalone* (tela cheia, sem barras de navegador), com ícone próprio na tela de início.
+- **Service Worker & Cache Resiliente**: Carregamento instantâneo do shell da aplicação com cache inteligente e garantia de dados de API sempre frescos (*network-first*).
+- **Botão "Instalar App" Integrado**: Identifica automaticamente se o aplicativo pode ser instalado no Android/Desktop e disponibiliza guia passo a passo ilustrado para usuários de iPhone/iPad no Safari.
+- **Barra de Navegação Inferior (*Bottom Navigation Bar*)**: Fixa no rodapé em dispositivos móveis, com botão central FAB flutuante (+) para cadastrar transações com uma só mão.
+- **Dual Mode no Extrato**: Exibição inteligente em cartões financeiros detalhados em telas menores e em tabela estruturada em computadores e tablets.
+- **Modais no Estilo *Bottom Sheet***: Ancorados na base da tela do celular com *grab handles* e alvos de toque aumentados (mínimo de 44px).
 
-- 📝 **Modais de Ação e Layout em Largura Total**:
-  - **Modal de Nova Transação**: Janela modal elegante para cadastro rápido, liberando a tabela de extrato para ocupar a largura total da tela.
-  - **Modal de Edição Completa**: Permite atualizar qualquer detalhe de transações existentes (descrição, valor, frete, categoria e data) com sincronização em tempo real dos totais.
-- 🗑️ **Exclusão em Lote e Ações em Massa**:
-  - Seleção de múltiplos registros com checkbox mestre ("Selecionar Todos").
-  - Barra flutuante de ações em lote contextual exibindo a contagem e botão para exclusão atômica de múltiplos registros.
-- 🎨 **Design System Customizado (UI Moderna & Acessível)**:
-  - **`DatePicker`**: Calendário interativo renderizado via **React Portal**, com navegação rápida de meses e anos (`<<`, `>>`), atalhos "Hoje" e "Ontem", e formatação brasileira (`DD/MM/AAAA`). Flutua livremente sem ser cortado por rodapés ou rolagens de modais.
-  - **`Select`**: Dropdown moderno com *glassmorphism*, chevron animado, fechamento com `Esc` ou clique fora e marcadores de seleção.
-  - **`NumberInput`**: Campo de valor monetário com botões integrados ao tema (`CaretUp` e `CaretDown`), eliminando as setas e blocos brancos desconfigurados de navegadores WebKit.
-  - **`Checkbox`**: Caixa de seleção animada com transição fluida, suporte a estado indeterminado e alta fidelidade visual.
-- 🏷️ **Gestão Dinâmica de Categorias**: Criação dinâmica de novas categorias diretamente pelos formulários, com validação de unicidade.
-- 🌓 **Tema Claro & Escuro (Light/Dark Mode)**: Suporte completo a temas com detecção de preferência do sistema operacional e persistência em `localStorage`.
-- 🔍 **Filtros e Busca em Tempo Real**: Filtros combinados por busca textual, categoria, presença de taxa de frete e data mínima.
-- 🛡️ **Resiliência & Validações**: Tratamento de erros com `ErrorBoundary` no frontend e schemas Pydantic v2 rigorosos no backend.
+### 💳 Cartões de Crédito & Parcelamento
+- Cadastro de múltiplos cartões com bandeira, limite total e dias de fechamento/vencimento.
+- Cálculo dinâmico do limite disponível e total comprometido na fatura atual.
+- Parcelamento de compras com cálculo automático do valor por parcela e marcação clara (`1/3x`, `2/3x`, etc.).
+
+### 🔁 Contas Recorrentes & Fixas
+- Gerenciamento de despesas e receitas que se repetem periodicamente (aluguel, streaming, internet, salários).
+- Acesso rápido aos totais mensais fixos com atalho direto na barra de navegação móvel.
+
+### 📊 Dashboards & Métricas Financeiras
+- **Navegador Mensal com Setas (`< Mês Ano >`)**: Avanço e retrocesso de meses em 1 toque, com retorno rápido ao mês corrente e atalhos rápidos (*Este Mês*, *30 Dias*, *Este Ano*, *Tudo*, *Personalizado*).
+- **Cards de KPIs Analíticos**: Tipografia fluida que exibe Gastos Totais, Receitas, Saldo Líquido e Percentual de Frete sem quebra de valores em telas compactas.
+- **Gráficos Interativos (Recharts)**:
+  - *Distribuição por Categoria*: Gráfico Donut detalhando os maiores centros de custo.
+  - *Evolução Histórica*: Curva diária de fluxo financeiro.
+  - *Produto vs. Frete*: Comparativo visual entre despesas reais e custos de entrega.
+
+### 🔐 Segurança, Autenticação & Multi-tenant
+- Cadastro e login seguros com validação de e-mail e hash de senhas via `bcrypt`.
+- Autenticação stateless via **JSON Web Tokens (JWT)** no padrão Bearer Token.
+- **Isolamento Completo (Multi-tenant)**: Consultas e manipulações de banco de dados são estritamente filtradas pelo ID do usuário autenticado (`usuario_id = current_user.id`).
+- **Proteção contra Força Bruta**: Rate limiting integrado para mitigar tentativas excessivas de requisições.
+
+### 🎨 Design System & Acessibilidade
+- **Modo Escuro e Claro (Dark/Light Mode)**: Alternância suave com detecção de preferência do sistema operacional e persistência local.
+- **Componentes Customizados**:
+  - `DatePicker` em popover via React Portal (nunca cortado por rolagens de modais).
+  - `Select` estilizado com suporte a teclado (`Esc`), chevron animado e glassmorphism.
+  - `NumberInput` com botões de incremento modernos livres de distorções WebKit.
+- **Ações em Massa**: Seleção múltipla de transações e exclusão em lote atômica com confirmação.
 
 ---
 
@@ -49,75 +63,95 @@ Ter clareza sobre para onde vai o seu dinheiro é o primeiro passo para economiz
 
 | Camada | Tecnologias |
 |---|---|
-| **Backend** | Python 3.12+ / 3.13, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyJWT, Bcrypt, Uvicorn |
+| **Backend** | Python 3.12+ / 3.13, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyJWT, Passlib (Bcrypt), Uvicorn |
 | **Banco de Dados** | SQLite com integridade referencial ativa (`PRAGMA foreign_keys = ON`) |
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
-| **Componentes & UI** | Phosphor Icons, Recharts, React Portal, Axios |
+| **PWA & Mobile** | Web App Manifest (W3C), Service Worker, Ícones Adaptativos (Maskable + SVG) |
+| **Visualização & UI** | Phosphor Icons, Recharts, React Portal, Axios |
 | **Testes** | Pytest, HTTPX, FastAPI TestClient |
 | **DevOps & Containers** | Docker, Docker Compose |
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Estrutura do Repositório
 
 ```text
 Financas/
 ├── backend/
 │   ├── app/
-│   │   ├── auth.py                     # Criptografia (bcrypt), criação/validação JWT e get_current_user
-│   │   ├── database.py                 # Conexão SQLite e injeção de dependência get_db
-│   │   ├── models.py                   # Modelos SQLAlchemy (Usuario, Categoria, Transacao)
-│   │   ├── schemas.py                  # Schemas e validações Pydantic v2 (Auth, Transações, Categorias)
-│   │   ├── crud.py                     # Operações de BD, isolamento multi-tenant e migração automática
-│   │   └── main.py                     # Rotas REST, autenticação, injeção de segurança e CORS
+│   │   ├── auth.py                     # Hashing (bcrypt), tokens JWT e dependência get_current_user
+│   │   ├── database.py                 # Conexão SQLite e get_db com foreign keys ativas
+│   │   ├── models.py                   # Modelos SQLAlchemy (Usuario, Categoria, Transacao, Cartao, Recorrencia)
+│   │   ├── schemas.py                  # Validação Pydantic v2 para requisições e respostas
+│   │   ├── crud.py                     # Camada de acesso a dados isolada por usuário
+│   │   └── main.py                     # Endpoints REST, rotas e middlewares CORS/Rate-Limit
 │   ├── tests/
-│   │   └── test_auth_flow.py           # Testes de integração (registro, login, tokens e isolamento)
+│   │   ├── test_auth_flow.py           # Testes do fluxo de autenticação e isolamento multi-tenant
+│   │   ├── test_flow_cards_recurrence.py# Testes de cartões e contas recorrentes
+│   │   └── test_rate_limit.py          # Testes de proteção e rate limiting
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
+│   ├── public/                         # Assets públicos e do PWA
+│   │   ├── manifest.webmanifest        # Manifesto Web App (PWA)
+│   │   ├── sw.js                       # Service Worker com cache do shell estático
+│   │   ├── icon.svg                    # Ícone vetorial da aplicação
+│   │   ├── icon-192.png / icon-512.png # Ícones para Android e Desktop
+│   │   ├── icon-maskable-*.png         # Ícones adaptativos com área segura
+│   │   └── apple-touch-icon.png        # Ícone para tela inicial do iOS
 │   ├── src/
 │   │   ├── components/                 # Componentes modulares
-│   │   │   ├── Checkbox.tsx            # Checkbox customizado com animação e indeterminado
-│   │   │   ├── Select.tsx              # Dropdown estilizado com glassmorphism
-│   │   │   ├── NumberInput.tsx         # Input numérico com setas modernas customizadas
+│   │   │   ├── DashboardResumo.tsx     # KPIs, navegador mensal e gráficos Recharts
+│   │   │   ├── ListaTransacoes.tsx     # Extrato responsivo (Cards no mobile, Tabela no desktop)
+│   │   │   ├── FiltrosTransacoes.tsx   # Painel de busca expansível
+│   │   │   ├── ModuloCartoes.tsx       # Gestão de cartões e faturas
+│   │   │   ├── ModuloRecorrencias.tsx  # Gestão de despesas/receitas fixas
+│   │   │   ├── ModalNovaTransacao.tsx  # Cadastro rápido de transação
+│   │   │   ├── ModalEditarTransacao.tsx# Edição de transação existente
+│   │   │   ├── ModalInstalarApp.tsx    # Modal explicativo e guia de instalação iOS
+│   │   │   ├── ModalCartao.tsx         # Cadastro de cartões de crédito
+│   │   │   ├── ModalCategoria.tsx      # Criação dinâmica de categorias
+│   │   │   ├── ModalAuth.tsx           # Janela de Login e Cadastro
 │   │   │   ├── DatePicker.tsx          # Calendário popover renderizado via Portal
-│   │   │   ├── ModalNovaTransacao.tsx  # Modal de criação de transação
-│   │   │   ├── ModalEditarTransacao.tsx# Modal de edição de transação existente
-│   │   │   ├── DashboardResumo.tsx     # Cards de KPIs e gráficos Recharts
-│   │   │   ├── ListaTransacoes.tsx     # Extrato tabular com seleção múltipla
-│   │   │   ├── FiltrosTransacoes.tsx   # Painel de busca e filtros combinados
-│   │   │   └── ErrorBoundary.tsx       # Captura resiliente de falhas de renderização
-│   │   ├── hooks/                      # Custom hooks (useTheme)
-│   │   ├── services/                   # Cliente Axios tipado (api.ts)
-│   │   ├── types/                      # Interfaces TypeScript compartilhadas
-│   │   ├── App.tsx                     # Orquestrador da aplicação
-│   │   └── index.css                   # Design tokens, resets de spin buttons e Tailwind
+│   │   │   ├── Select.tsx              # Select estilizado com glassmorphism
+│   │   │   ├── NumberInput.tsx         # Campo numérico monetário customizado
+│   │   │   ├── Checkbox.tsx            # Checkbox animado com estado indeterminado
+│   │   │   └── ErrorBoundary.tsx       # Captura de erros de renderização
+│   │   ├── hooks/                      # Custom hooks (useAuth, useTheme, usePWAInstall)
+│   │   ├── contexts/                   # Contexto global de autenticação
+│   │   ├── services/                   # Cliente HTTP Axios centralizado (api.ts)
+│   │   ├── types/                      # Contratos TypeScript compartilhados
+│   │   ├── App.tsx                     # Orquestrador principal com barra móvel e rotas
+│   │   └── index.css                   # Tokens de design e Tailwind CSS
 │   ├── Dockerfile
-│   └── package.json
-└── docker-compose.yml
+│   ├── package.json
+│   └── vite.config.ts
+├── scripts/
+│   └── generate_pwa_icons.py           # Gerador automático de ícones PNG do PWA em Python puro
+├── docker-compose.yml
+├── pytest.ini
+└── README.md
 ```
 
 ---
 
 ## 🚀 Como Executar
 
-### Opção 1: Via Docker Compose (Recomendado)
+### Opção 1: Via Docker Compose (Mais Prático)
 
-Requer [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/) instalados.
+Requer [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/) instalados:
 
 ```bash
-# Copiar arquivo de variáveis de ambiente (opcional, defaults seguros já inclusos)
-cp .env.example .env
-
+# Subir aplicação completa (frontend + backend)
 docker compose up --build
 ```
 
-Após a inicialização:
-- **Frontend**: [http://localhost:5173](http://localhost:5173)
+Acesse no navegador:
+- **Frontend / WebApp**: [http://localhost:5173](http://localhost:5173)
 - **API Backend**: [http://localhost:8000](http://localhost:8000)
-- **Swagger UI (Docs Interativos)**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Documentação Swagger (OpenAPI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-Para encerrar os serviços:
+Para parar os serviços:
 ```bash
 docker compose down
 ```
@@ -133,9 +167,9 @@ cd backend
 python -m venv venv
 
 # Ativar ambiente virtual
-# Windows:
-.\venv\Scripts\activate
-# Linux/macOS:
+# No Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# No Linux/macOS:
 source venv/bin/activate
 
 pip install -r requirements.txt
@@ -152,68 +186,59 @@ npm install
 npm run dev
 ```
 
-O frontend estará acessível em `http://localhost:5173`.
+O frontend estará disponível em `http://localhost:5173`.
 
 ---
 
-### 🧪 Executar Testes Automatizados
+## 🧪 Testes Automatizados
 
-O backend conta com uma suíte de testes de integração automatizados cobrindo o fluxo completo de autenticação e isolamento multi-usuário:
+O backend possui cobertura de testes de integração automatizados que validam segurança, autenticação, controle de limites de cartões, cálculo de parcelas e regras de rate limiting:
 
 ```bash
-# A partir da raiz do projeto:
-python -m pytest backend/tests/test_auth_flow.py -v
+# Executar a suíte completa de testes (16 testes):
+python -m pytest
 
-# Ou dentro da pasta backend:
-cd backend
-python -m pytest tests/test_auth_flow.py -v
+# Ou especificando o ambiente virtual:
+backend\venv\Scripts\python.exe -m pytest -v
 ```
 
 ---
 
-## ⚙️ Variáveis de Ambiente
+## 📖 Principais Endpoints da API
 
-As variáveis possuem valores padrão para desenvolvimento local, mas podem ser customizadas via arquivo `.env`:
+A documentação interativa e testável em tempo real está disponível em `/docs`.
 
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `DATABASE_URL` | `sqlite:///./financas.db` | String de conexão com o banco de dados |
-| `SECRET_KEY` | *(chave interna padrão)* | Segredo criptográfico para assinatura dos tokens JWT |
-| `JWT_ALGORITHM` | `HS256` | Algoritmo de assinatura do JWT |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` (24 horas) | Tempo de expiração do token de acesso em minutos |
-| `VITE_API_URL` | `http://localhost:8000/api` | URL base do backend consumida pelo frontend |
+| Módulo | Método | Rota | Descrição |
+|---|---|---|---|
+| **Auth** | `POST` | `/api/auth/register` | Cadastro de usuário com senha criptografada |
+| **Auth** | `POST` | `/api/auth/login` | Login com geração de Bearer Token JWT |
+| **Auth** | `GET` | `/api/auth/me` | Dados do perfil do usuário conectado |
+| **Transações** | `GET` | `/api/transacoes` | Lista transações do usuário (filtros: período, busca, cartão, frete) |
+| **Transações** | `POST` | `/api/transacoes` | Cadastra transação (com frete e parcelamento opcional) |
+| **Transações** | `PUT` | `/api/transacoes/{id}` | Atualiza transação existente |
+| **Transações** | `DELETE` | `/api/transacoes/{id}` | Exclui transação individual |
+| **Transações** | `POST` | `/api/transacoes/bulk-delete` | Exclusão atômica em massa por IDs |
+| **Cartões** | `GET` | `/api/cartoes` | Lista cartões de crédito e faturas do usuário |
+| **Cartões** | `POST` | `/api/cartoes` | Cadastra novo cartão de crédito |
+| **Recorrências** | `GET` | `/api/recorrencias` | Lista contas recorrentes ativas |
+| **Recorrências** | `POST` | `/api/recorrencias` | Cadastra despesa ou receita recorrente |
+| **Dashboard** | `GET` | `/api/dashboard/resumo` | KPIs agregados, fretes e distribuição por período |
+| **Categorias** | `GET` | `/api/categorias` | Lista categorias cadastradas |
+| **Categorias** | `POST` | `/api/categorias` | Criação de nova categoria |
 
 ---
 
-## 📖 Endpoints da API
+## 📲 Como Instalar como WebApp (PWA)
 
-A documentação interativa completa (OpenAPI / Swagger) é gerada automaticamente pelo FastAPI e pode ser acessada em `/docs`.
+1. **No Google Chrome / Microsoft Edge (Desktop ou Android)**:
+   - Clique no botão **"Instalar App"** localizado no cabeçalho superior ou no ícone de instalação na barra de endereço do navegador.
+2. **No Safari (iPhone / iPad)**:
+   - Toque no botão de **Compartilhar** (<kbd>⎋</kbd>) na barra inferior do Safari.
+   - Selecione a opção **"Adicionar à Tela de Início"** (<kbd>➕</kbd>).
+   - Confirme em **"Adicionar"**.
 
-### Autenticação & Usuários
-| Método | Rota | Autenticação | Descrição |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | Pública | Cadastrar novo usuário (nome, e-mail único e senha) |
-| `POST` | `/api/auth/login` | Pública | Login com credenciais, retornando token JWT (`bearer`) |
-| `GET` | `/api/auth/me` | Bearer Token | Retorna perfil do usuário logado |
+---
 
-### Categorias
-| Método | Rota | Autenticação | Descrição |
-|---|---|---|---|
-| `GET` | `/api/categorias` | Pública | Listar todas as categorias cadastradas |
-| `POST` | `/api/categorias` | Bearer Token | Criar uma nova categoria personalizada |
+## 📄 Licença
 
-### Transações & Extrato (Isoladas por Usuário)
-| Método | Rota | Autenticação | Descrição |
-|---|---|---|---|
-| `GET` | `/api/transacoes` | Bearer Token | Listar transações do usuário logado (filtros: categoria, data, frete, busca) |
-| `POST` | `/api/transacoes` | Bearer Token | Cadastrar nova transação com segregação de frete para o usuário |
-| `PUT` | `/api/transacoes/{id}` | Bearer Token | Atualizar transação existente do usuário logado |
-| `DELETE` | `/api/transacoes/{id}` | Bearer Token | Remover transação individual do usuário logado |
-| `POST` | `/api/transacoes/bulk-delete` | Bearer Token | Excluir transações em lote do usuário passando array de IDs |
-
-### Dashboard & Métricas (Isoladas por Usuário)
-| Método | Rota | Autenticação | Descrição |
-|---|---|---|---|
-| `GET` | `/api/dashboard/resumo` | Bearer Token | Métricas analíticas do usuário (total, fretes, % frete, gastos por categoria) |
-
-
+Distribuído sob licença MIT. Consulte `LICENSE` para mais informações.

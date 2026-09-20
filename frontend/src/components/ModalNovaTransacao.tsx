@@ -171,14 +171,19 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150"
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submetendo) handleFechar();
       }}
     >
-      <div className="bg-card border border-border rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[88vh] sm:max-h-[92vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+        {/* Indicador visual de arrasto no topo para mobile */}
+        <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center bg-card shrink-0">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+
         {/* Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-border flex items-center justify-between bg-card">
+        <div className="shrink-0 px-4 py-3 sm:p-5 border-b border-border flex items-center justify-between bg-card">
           <div className="flex items-center gap-2.5">
             <div className={`p-2 rounded-lg ${isReceita ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'}`}>
               {isReceita ? <ArrowCircleUp size={20} weight="duotone" /> : <ArrowCircleDown size={20} weight="duotone" />}
@@ -191,7 +196,7 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
           <button
             onClick={handleFechar}
             disabled={submetendo}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 cursor-pointer"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
           >
             <X size={18} weight="bold" />
           </button>
@@ -478,20 +483,20 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
 
           </div>
 
-          {/* Rodapé Fixo com Botões de Ação */}
-          <div className="shrink-0 p-4 border-t border-border bg-card/95 backdrop-blur flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+          {/* Rodapé Fixo com Botões de Ação Touch-Friendly e Safe Area */}
+          <div className="shrink-0 p-4 border-t border-border bg-card/95 backdrop-blur flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={handleFechar}
               disabled={submetendo}
-              className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border transition-colors disabled:opacity-50 cursor-pointer text-center"
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submetendo}
-              className="w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer text-center"
+              className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
               {submetendo ? (
                 <>
@@ -500,7 +505,7 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                 </>
               ) : (
                 <>
-                  <PlusCircle size={15} weight="bold" />
+                  <PlusCircle size={16} weight="bold" />
                   <span>Registrar Transação</span>
                 </>
               )}

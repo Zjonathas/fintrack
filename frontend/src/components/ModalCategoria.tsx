@@ -60,11 +60,19 @@ export const ModalCategoria: React.FC<ModalCategoriaProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-enter">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-150"
+      onClick={onClose}
+    >
       <div
-        className="card w-full max-w-md p-6 space-y-5 shadow-2xl border border-border"
+        className="bg-card w-full max-w-md p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl border border-border rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 pb-[max(1rem,env(safe-area-inset-bottom))]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Indicador visual de arrasto no topo para mobile */}
+        <div className="sm:hidden w-full pt-1 pb-1 flex justify-center shrink-0">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+
         {/* Header do Modal */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -82,7 +90,7 @@ export const ModalCategoria: React.FC<ModalCategoriaProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
             title="Fechar"
           >
             <X size={16} weight="bold" />
@@ -128,24 +136,24 @@ export const ModalCategoria: React.FC<ModalCategoriaProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary border border-border rounded-md transition-colors"
+              className="min-h-[44px] px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary border border-border rounded-lg transition-colors cursor-pointer flex items-center justify-center"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={salvando || !nome.trim()}
-              className="px-4 py-2 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+              className="min-h-[44px] px-4 py-2 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
             >
               {salvando ? (
                 <span>Salvando...</span>
               ) : (
                 <>
-                  <Plus size={14} weight="bold" />
+                  <Plus size={15} weight="bold" />
                   <span>Cadastrar Categoria</span>
                 </>
               )}
