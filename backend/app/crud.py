@@ -332,9 +332,9 @@ def get_fatura_cartao(db: Session, cartao_id: int, usuario_id: int, mes_referenc
         .all()
     )
 
-    total_fatura = sum(t.valor_produto for t in transacoes_mes)
+    total_fatura = sum(t.valor_total for t in transacoes_mes)
 
-    # Limite total utilizado no cartao considera todas as transacoes ativas do usuario neste cartao
+    # Limite total utilizado no cartao considera todas as transacoes ativas do usuario neste cartao (incluindo fretes)
     todas_transacoes = (
         db.query(models.Transacao)
         .filter(
@@ -343,7 +343,7 @@ def get_fatura_cartao(db: Session, cartao_id: int, usuario_id: int, mes_referenc
         )
         .all()
     )
-    total_comprometido = sum(t.valor_produto for t in todas_transacoes)
+    total_comprometido = sum(t.valor_total for t in todas_transacoes)
     limite_disponivel = round(cartao.limite - total_comprometido, 2)
     percentual = round((total_comprometido / cartao.limite * 100), 2) if cartao.limite > 0 else 0.0
 
@@ -422,11 +422,14 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
                 for _ in range(i - 1):
                     data_parcela = _avancar_mes(data_parcela)
 
+            teve_ent = transacao.teve_entrega if i == 1 else False
+            val_ent = round(transacao.valor_entrega or 0.0, 2) if (i == 1 and transacao.teve_entrega) else 0.0
+
             db_t = models.Transacao(
                 descricao=transacao.descricao.strip(),
                 valor_produto=valor_parcela,
-                teve_entrega=False,
-                valor_entrega=0.0,
+                teve_entrega=teve_ent,
+                valor_entrega=val_ent,
                 data=data_parcela,
                 categoria_id=transacao.categoria_id,
                 usuario_id=usuario_id,
