@@ -73,7 +73,7 @@ function AppContent() {
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
 
   // Gerenciamento de instalação PWA / WebApp
-  const { isStandalone, isIOS, canPromptDirectly, instalar } = usePWAInstall();
+  const { isStandalone, isIOS, canPromptDirectly, isSecureContext, instalar } = usePWAInstall();
 
   const handleClicarInstalar = async () => {
     if (canPromptDirectly) {
@@ -365,6 +365,7 @@ function AppContent() {
         onClose={() => setModalInstalarAberto(false)}
         isIOS={isIOS}
         canPromptDirectly={canPromptDirectly}
+        isSecureContext={isSecureContext}
         onInstalar={async () => {
           await instalar();
         }}

@@ -11,6 +11,7 @@ export function usePWAInstall() {
   });
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
+  const isSecureContext = typeof window !== 'undefined' ? Boolean(window.isSecureContext) : true;
 
   useEffect(() => {
     // 1. Detecta se a aplicação já está rodando como app instalado (Standalone)
@@ -99,10 +100,11 @@ export function usePWAInstall() {
   );
 
   return {
-    isInstallable: canPrompt || (isIOS && !isStandalone),
+    isInstallable: canPrompt || (isIOS && !isStandalone) || !isSecureContext,
     canPromptDirectly: canPrompt,
     isStandalone,
     isIOS,
+    isSecureContext,
     instalar,
   };
 }

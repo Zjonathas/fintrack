@@ -10,6 +10,9 @@ import {
   CheckCircle,
   Lightning,
   ShieldCheck,
+  WarningCircle,
+  Copy,
+  Check,
 } from '@phosphor-icons/react';
 
 interface ModalInstalarAppProps {
@@ -17,6 +20,7 @@ interface ModalInstalarAppProps {
   onClose: () => void;
   isIOS: boolean;
   canPromptDirectly: boolean;
+  isSecureContext?: boolean;
   onInstalar: () => Promise<void>;
 }
 
@@ -25,12 +29,22 @@ export const ModalInstalarApp: React.FC<ModalInstalarAppProps> = ({
   onClose,
   isIOS,
   canPromptDirectly,
+  isSecureContext = true,
   onInstalar,
 }) => {
   const [tentativaRealizada, setTentativaRealizada] = useState(false);
   const [instalando, setInstalando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   if (!isOpen) return null;
+
+  const copiarOrigin = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.origin);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    }
+  };
 
   const handleAdicionar = async () => {
     setInstalando(true);
@@ -122,6 +136,41 @@ export const ModalInstalarApp: React.FC<ModalInstalarAppProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Alerta explicativo quando acessado via IP HTTP sem HTTPS */}
+          {!isSecureContext && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2.5 text-xs animate-in fade-in duration-200">
+              <div className="font-semibold text-amber-500 flex items-center gap-1.5">
+                <WarningCircle size={16} weight="bold" className="shrink-0" />
+                <span>Acesso via IP local (HTTP) detectado</span>
+              </div>
+              <p className="text-muted-foreground text-[11px] leading-relaxed">
+                Navegadores como o Chrome bloqueiam a instalação nativa de PWAs em endereços IP sem HTTPS. Para liberar no Chrome do celular ou computador:
+              </p>
+              <div className="bg-background/80 border border-border/60 rounded-lg p-2.5 space-y-1.5 text-[11px]">
+                <div className="text-muted-foreground">1. Abra uma nova aba no Chrome e acesse:</div>
+                <div className="font-mono text-primary bg-secondary/80 px-2 py-1 rounded text-[10px] break-all select-all">
+                  chrome://flags/#unsafely-treat-insecure-origin-as-secure
+                </div>
+                <div className="text-muted-foreground mt-1">2. Marque como <b>Enabled</b> e cole o endereço do seu servidor:</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-foreground bg-secondary/80 px-2 py-1 rounded text-[10px] flex-1 truncate">
+                    {typeof window !== 'undefined' ? window.location.origin : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copiarOrigin}
+                    className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors cursor-pointer shrink-0 flex items-center gap-1 text-[10px]"
+                    title="Copiar endereço"
+                  >
+                    {copiado ? <Check size={12} weight="bold" /> : <Copy size={12} weight="bold" />}
+                    <span>{copiado ? 'Copiado' : 'Copiar'}</span>
+                  </button>
+                </div>
+                <div className="text-muted-foreground text-[10px] mt-1">3. Clique em <b>Relaunch</b> no Chrome para reiniciar com instalação liberada!</div>
+              </div>
+            </div>
+          )}
 
           {/* Instruções Passo a Passo quando a instalação automática depende de ação do navegador */}
           {(!canPromptDirectly || tentativaRealizada || isIOS) && (
