@@ -321,62 +321,85 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho do Dashboard com controles de visualização */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Coins size={22} weight="duotone" className="text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro & KPIs</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Visão detalhada de onde seu dinheiro está sendo gasto e análise de economia
-          </p>
-
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Alternador de visualizações */}
-          <div className="flex items-center bg-secondary p-1 rounded-lg border border-border text-xs">
-            <button
-              onClick={() => setActiveTab('geral')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'geral'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ChartPieSlice size={14} weight="bold" />
-              Visão Geral
-            </button>
-            <button
-              onClick={() => setActiveTab('categorias')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'categorias'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <ChartBar size={14} weight="bold" />
-              Categorias
-            </button>
-            <button
-              onClick={() => setActiveTab('evolucao')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'evolucao'
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <TrendUp size={14} weight="bold" />
-              Evolução
-            </button>
+      {/* Cabeçalho do Dashboard com controles de visualização responsivos */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Título & Subtítulo + Botão Atualizar (no mobile) */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Coins size={22} weight="duotone" className="text-primary shrink-0" />
+              <h2 className="text-lg font-semibold text-foreground">Resumo Financeiro & KPIs</h2>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Visão detalhada de onde seu dinheiro está sendo gasto e análise de economia
+            </p>
           </div>
 
+          {/* Botão Atualizar em telas pequenas (mobile) no canto superior */}
           <button
+            type="button"
             onClick={onRefresh}
             disabled={loading}
             title="Atualizar dados analíticos"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-card hover:bg-accent border border-border rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+            className="sm:hidden flex items-center justify-center p-2 text-muted-foreground hover:text-foreground bg-card hover:bg-accent border border-border rounded-xl transition-colors disabled:opacity-50 shrink-0 min-h-[36px] min-w-[36px] cursor-pointer shadow-2xs"
+          >
+            <ArrowsClockwise
+              size={16}
+              weight="bold"
+              className={loading ? 'animate-spin' : ''}
+            />
+          </button>
+        </div>
+
+        {/* Controles: Abas Segmented Control e Botão Atualizar (em telas maiores) */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Alternador de visualizações */}
+          <div className="grid grid-cols-3 sm:flex items-center bg-secondary/80 p-1 rounded-xl border border-border text-xs w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab('geral')}
+              className={`px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap text-center cursor-pointer ${
+                activeTab === 'geral'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ChartPieSlice size={15} weight={activeTab === 'geral' ? 'fill' : 'bold'} className="shrink-0" />
+              <span>Visão Geral</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('categorias')}
+              className={`px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap text-center cursor-pointer ${
+                activeTab === 'categorias'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ChartBar size={15} weight={activeTab === 'categorias' ? 'fill' : 'bold'} className="shrink-0" />
+              <span>Categorias</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('evolucao')}
+              className={`px-3 py-2 sm:py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap text-center cursor-pointer ${
+                activeTab === 'evolucao'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <TrendUp size={15} weight={activeTab === 'evolucao' ? 'fill' : 'bold'} className="shrink-0" />
+              <span>Evolução</span>
+            </button>
+          </div>
+
+          {/* Botão Atualizar para sm+ */}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            title="Atualizar dados analíticos"
+            className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground bg-card hover:bg-accent border border-border rounded-xl px-3 py-2 transition-colors disabled:opacity-50 shrink-0 cursor-pointer shadow-2xs"
           >
             <ArrowsClockwise
               size={14}
