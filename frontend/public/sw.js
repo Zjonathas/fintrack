@@ -3,10 +3,11 @@
  * Habilita funcionamento offline do shell do app e instalação em dispositivos móveis/desktop.
  */
 
-const CACHE_NAME = 'financas-app-v1';
+const CACHE_NAME = 'financas-app-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
+  '/manifest.json',
   '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',
