@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   DeviceMobile,
   Export,
   PlusSquare,
+  DotsThreeVertical,
+  DownloadSimple,
+  Plus,
+  CheckCircle,
   Lightning,
   ShieldCheck,
-  CheckCircle,
-  DownloadSimple,
 } from '@phosphor-icons/react';
 
 interface ModalInstalarAppProps {
@@ -25,7 +27,28 @@ export const ModalInstalarApp: React.FC<ModalInstalarAppProps> = ({
   canPromptDirectly,
   onInstalar,
 }) => {
+  const [tentativaRealizada, setTentativaRealizada] = useState(false);
+  const [instalando, setInstalando] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleAdicionar = async () => {
+    setInstalando(true);
+    try {
+      if (canPromptDirectly) {
+        await onInstalar();
+        onClose();
+      } else {
+        // Se a API programática nativa não estiver disponível, tenta disparar e ativa o guia detalhado
+        await onInstalar().catch(() => {});
+        setTentativaRealizada(true);
+      }
+    } catch {
+      setTentativaRealizada(true);
+    } finally {
+      setInstalando(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -46,8 +69,8 @@ export const ModalInstalarApp: React.FC<ModalInstalarAppProps> = ({
               <DeviceMobile size={22} weight="duotone" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-foreground">Instalar FinançasApp</h2>
-              <p className="text-xs text-muted-foreground">Adicione à tela inicial do seu dispositivo</p>
+              <h2 className="text-base font-semibold text-foreground">Adicionar à Tela Inicial</h2>
+              <p className="text-xs text-muted-foreground">Instale o FinançasApp como aplicativo no seu dispositivo</p>
             </div>
           </div>
           <button
@@ -62,90 +85,110 @@ export const ModalInstalarApp: React.FC<ModalInstalarAppProps> = ({
 
         {/* Conteúdo */}
         <div className="p-5 space-y-4 overflow-y-auto">
-          {/* Logo e preview */}
+          {/* Card do Aplicativo com Logo e Status */}
           <div className="flex items-center gap-3.5 p-3.5 rounded-xl bg-secondary/50 border border-border/70">
             <img
               src="/icon-192.png"
               alt="Logo FinançasApp"
               className="w-12 h-12 rounded-xl shadow-xs border border-border shrink-0"
               onError={(e) => {
-                // Fallback para ícone SVG caso PNG falhe
                 (e.target as HTMLImageElement).src = '/icon.svg';
               }}
             />
-            <div>
-              <div className="font-semibold text-foreground text-sm">FinançasApp</div>
-              <div className="text-xs text-muted-foreground">Controle financeiro pessoal inteligente</div>
-              <div className="flex items-center gap-1.5 mt-1 text-[11px] text-primary font-medium">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-foreground text-sm truncate">FinançasApp</div>
+              <div className="text-xs text-muted-foreground truncate">Controle financeiro pessoal & KPIs</div>
+              <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-500 font-medium">
                 <CheckCircle size={13} weight="fill" />
                 <span>Aplicativo Web Progressivo (PWA)</span>
               </div>
             </div>
           </div>
 
-          {/* Vantagens */}
-          <div className="space-y-2 text-xs">
-            <div className="flex items-start gap-2.5 p-2 rounded-lg bg-secondary/20">
+          {/* Vantagens de Instalar */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-secondary/30 border border-border/50 flex items-start gap-2">
               <Lightning size={16} weight="fill" className="text-amber-500 shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold text-foreground">Abertura instantânea: </span>
-                <span className="text-muted-foreground">Inicia diretamente na tela cheia sem barras do navegador.</span>
+                <span className="font-semibold text-foreground block">Tela Cheia</span>
+                <span className="text-[11px] text-muted-foreground leading-tight block">Sem barras de URL</span>
               </div>
             </div>
-            <div className="flex items-start gap-2.5 p-2 rounded-lg bg-secondary/20">
+            <div className="p-2.5 rounded-xl bg-secondary/30 border border-border/50 flex items-start gap-2">
               <ShieldCheck size={16} weight="fill" className="text-emerald-500 shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold text-foreground">Leve e seguro: </span>
-                <span className="text-muted-foreground">Não consome gigabytes da memória e mantém seus dados seguros.</span>
+                <span className="font-semibold text-foreground block">Acesso Rápido</span>
+                <span className="text-[11px] text-muted-foreground leading-tight block">Ícone no seu início</span>
               </div>
             </div>
           </div>
 
-          {/* Instruções específicas para iOS Safari */}
-          {isIOS ? (
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-2.5 text-xs">
+          {/* Instruções Passo a Passo quando a instalação automática depende de ação do navegador */}
+          {(!canPromptDirectly || tentativaRealizada || isIOS) && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3.5 space-y-2.5 text-xs animate-in fade-in duration-200">
               <div className="font-semibold text-primary flex items-center gap-1.5">
-                <Export size={16} weight="bold" />
-                Como instalar no iPhone / iPad:
+                {isIOS ? <Export size={16} weight="bold" /> : <DotsThreeVertical size={16} weight="bold" />}
+                <span>
+                  {isIOS ? 'Como adicionar no iPhone / iPad (Safari):' : 'Como adicionar pelo seu navegador:'}
+                </span>
               </div>
-              <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                <li className="leading-relaxed">
-                  Toque no botão de <span className="font-semibold text-foreground">Compartilhar</span> (<Export size={13} className="inline mx-0.5 text-foreground" weight="bold" />) na barra inferior do Safari.
-                </li>
-                <li className="leading-relaxed">
-                  Role a lista e selecione <span className="font-semibold text-foreground">"Adicionar à Tela de Início"</span> (<PlusSquare size={13} className="inline mx-0.5 text-foreground" weight="bold" />).
-                </li>
-                <li className="leading-relaxed">
-                  Toque em <span className="font-semibold text-foreground">"Adicionar"</span> no canto superior direito.
-                </li>
-              </ol>
+
+              {isIOS ? (
+                <ol className="list-decimal list-inside space-y-2 text-muted-foreground text-[11px]">
+                  <li className="leading-relaxed">
+                    Toque no botão de <span className="font-semibold text-foreground">Compartilhar</span> (<Export size={13} className="inline mx-0.5 text-foreground" weight="bold" />) na barra inferior do Safari.
+                  </li>
+                  <li className="leading-relaxed">
+                    Role a lista e selecione <span className="font-semibold text-foreground">"Adicionar à Tela de Início"</span> (<PlusSquare size={13} className="inline mx-0.5 text-foreground" weight="bold" />).
+                  </li>
+                  <li className="leading-relaxed">
+                    Toque em <span className="font-semibold text-foreground">"Adicionar"</span> no canto superior direito.
+                  </li>
+                </ol>
+              ) : (
+                <ol className="list-decimal list-inside space-y-2 text-muted-foreground text-[11px]">
+                  <li className="leading-relaxed">
+                    Toque no menu de <span className="font-semibold text-foreground">três pontinhos</span> (<DotsThreeVertical size={13} className="inline mx-0.5 text-foreground" weight="bold" />) no canto superior do navegador (ou ícone de instalar na barra de URL no computador).
+                  </li>
+                  <li className="leading-relaxed">
+                    Selecione a opção <span className="font-semibold text-foreground">"Adicionar à tela inicial"</span> ou <span className="font-semibold text-foreground">"Instalar aplicativo"</span>.
+                  </li>
+                  <li className="leading-relaxed">
+                    Confirme em <span className="font-semibold text-foreground">"Adicionar"</span> / <span className="font-semibold text-foreground">"Instalar"</span> para criar o atalho nativo.
+                  </li>
+                </ol>
+              )}
             </div>
-          ) : null}
+          )}
         </div>
 
-        {/* Rodapé com botão de ação */}
-        <div className="p-4 border-t border-border/70 bg-card/80 flex flex-col sm:flex-row items-center justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* Rodapé com o botão de ADICIONAR SEMPRE DISPONÍVEL */}
+        <div className="p-4 border-t border-border/70 bg-card/80 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onClose}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all cursor-pointer text-center"
           >
-            {isIOS ? 'Entendi' : 'Mais tarde'}
+            Fechar
           </button>
 
-          {canPromptDirectly && !isIOS ? (
-            <button
-              type="button"
-              onClick={async () => {
-                await onInstalar();
-                onClose();
-              }}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold shadow-md hover:shadow-primary/20 transition-all cursor-pointer text-center"
-            >
+          <button
+            type="button"
+            onClick={handleAdicionar}
+            disabled={instalando}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold shadow-md hover:shadow-primary/25 transition-all cursor-pointer text-center disabled:opacity-50"
+          >
+            {instalando ? (
+              <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+            ) : canPromptDirectly ? (
               <DownloadSimple size={16} weight="bold" />
-              <span>Instalar Agora</span>
-            </button>
-          ) : null}
+            ) : (
+              <Plus size={16} weight="bold" />
+            )}
+            <span>
+              {canPromptDirectly ? 'Instalar Aplicativo Agora' : 'Adicionar à Tela Inicial'}
+            </span>
+          </button>
         </div>
       </div>
     </div>

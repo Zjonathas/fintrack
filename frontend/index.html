@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Controle financeiro pessoal inteligente: acompanhe seus gastos, identifique despesas e descubra onde economizar mais" />
     <!-- Progressive Web App (PWA) Manifest & Icons -->
+    <link rel="manifest" href="/manifest.json" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#090d16" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -14,6 +15,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FinançasApp" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Captura antecipada de beforeinstallprompt para PWA -->
+    <script>
+      window.deferredPWAInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.deferredPWAInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+      });
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,9 +47,7 @@
 
         // Registro resiliente do Service Worker para PWA
         if ('serviceWorker' in navigator) {
-          window.addEventListener('load', function () {
-            navigator.serviceWorker.register('/sw.js').catch(function () {});
-          });
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
         }
       })();
     </script>

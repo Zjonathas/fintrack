@@ -6,7 +6,9 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(() => {
+    return (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent }).deferredPWAInstallPrompt || null;
+  });
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [isIOS, setIsIOS] = useState<boolean>(false);
 
@@ -25,36 +27,55 @@ export function usePWAInstall() {
 
     // 2. Detecta se o dispositivo é iOS / iPadOS
     const userAgent = window.navigator.userAgent.toLowerCase();
-    const isAppleDevice = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAppleDevice =
+      /iphone|ipad|ipod/.test(userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     setIsIOS(isAppleDevice);
 
     // 3. Captura o evento nativo de prompt de instalação do Chromium (Android / Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const promptEvent = e as BeforeInstallPromptEvent;
+      (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent }).deferredPWAInstallPrompt = promptEvent;
+      setDeferredPrompt(promptEvent);
+    };
+
+    const handlePromptReady = () => {
+      const earlyPrompt = (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent }).deferredPWAInstallPrompt;
+      if (earlyPrompt) {
+        setDeferredPrompt(earlyPrompt);
+      }
     };
 
     const handleAppInstalled = () => {
+      (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent | null }).deferredPWAInstallPrompt = null;
       setDeferredPrompt(null);
       setIsStandalone(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-prompt-ready', handlePromptReady);
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-prompt-ready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
-  // Dispara o fluxo de instalação
+  // Dispara o fluxo nativo de instalação
   const instalar = useCallback(async (): Promise<'accepted' | 'dismissed' | 'ios' | 'unavailable'> => {
-    if (deferredPrompt) {
+    const activePrompt =
+      deferredPrompt ||
+      (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent }).deferredPWAInstallPrompt;
+
+    if (activePrompt) {
       try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const choice = await activePrompt.userChoice;
         if (choice.outcome === 'accepted') {
+          (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent | null }).deferredPWAInstallPrompt = null;
           setDeferredPrompt(null);
           return 'accepted';
         }
@@ -72,9 +93,14 @@ export function usePWAInstall() {
     return 'unavailable';
   }, [deferredPrompt, isIOS, isStandalone]);
 
+  const canPrompt = Boolean(
+    deferredPrompt ||
+    (typeof window !== 'undefined' && (window as unknown as { deferredPWAInstallPrompt?: BeforeInstallPromptEvent }).deferredPWAInstallPrompt)
+  );
+
   return {
-    isInstallable: Boolean(deferredPrompt) || (isIOS && !isStandalone),
-    canPromptDirectly: Boolean(deferredPrompt),
+    isInstallable: canPrompt || (isIOS && !isStandalone),
+    canPromptDirectly: canPrompt,
     isStandalone,
     isIOS,
     instalar,
