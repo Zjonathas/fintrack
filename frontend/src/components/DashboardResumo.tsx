@@ -9,6 +9,8 @@ import {
   ArrowCircleUp,
   ArrowCircleDown,
   CalendarBlank,
+  CaretLeft,
+  CaretRight,
 } from '@phosphor-icons/react';
 import {
   ResponsiveContainer,
@@ -31,6 +33,7 @@ import { DatePicker } from './DatePicker';
 export type TipoPeriodo =
   | 'mes_atual'
   | 'mes_anterior'
+  | 'mes_especifico'
   | 'ultimos_30_dias'
   | 'ano_atual'
   | 'tudo'
@@ -48,25 +51,37 @@ interface DashboardResumoProps {
 const pad = (n: number) => String(n).padStart(2, '0');
 const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+export const MESES_NOMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
 export const getIntervaloPeriodo = (
   tipo: TipoPeriodo,
   customIni?: string,
-  customFim?: string
+  customFim?: string,
+  ano?: number,
+  mes?: number
 ): { inicio?: string; fim?: string; rotulo: string } => {
   const agora = new Date();
-  const y = agora.getFullYear();
-  const m = agora.getMonth();
+  const y = ano !== undefined ? ano : agora.getFullYear();
+  const m = mes !== undefined ? mes : agora.getMonth();
 
   switch (tipo) {
     case 'mes_atual': {
-      const ini = new Date(y, m, 1);
-      const fim = new Date(y, m + 1, 0);
-      return { inicio: toISO(ini), fim: toISO(fim), rotulo: 'Este Mês' };
+      const ini = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: `${MESES_NOMES[agora.getMonth()]} de ${agora.getFullYear()}` };
     }
     case 'mes_anterior': {
-      const ini = new Date(y, m - 1, 1);
-      const fim = new Date(y, m, 0);
-      return { inicio: toISO(ini), fim: toISO(fim), rotulo: 'Mês Anterior' };
+      const ini = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth(), 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: `${MESES_NOMES[ini.getMonth()]} de ${ini.getFullYear()}` };
+    }
+    case 'mes_especifico': {
+      const ini = new Date(y, m, 1);
+      const fim = new Date(y, m + 1, 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: `${MESES_NOMES[m]} de ${y}` };
     }
     case 'ultimos_30_dias': {
       const ini = new Date(agora);
@@ -74,7 +89,7 @@ export const getIntervaloPeriodo = (
       return { inicio: toISO(ini), fim: toISO(agora), rotulo: 'Últimos 30 Dias' };
     }
     case 'ano_atual': {
-      return { inicio: `${y}-01-01`, fim: `${y}-12-31`, rotulo: `Ano de ${y}` };
+      return { inicio: `${agora.getFullYear()}-01-01`, fim: `${agora.getFullYear()}-12-31`, rotulo: `Ano de ${agora.getFullYear()}` };
     }
     case 'tudo': {
       return { inicio: undefined, fim: undefined, rotulo: 'Todo o Histórico' };
@@ -141,6 +156,8 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'geral' | 'categorias' | 'evolucao'>('geral');
   const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>('mes_atual');
+  const [anoRef, setAnoRef] = useState<number>(() => new Date().getFullYear());
+  const [mesRef, setMesRef] = useState<number>(() => new Date().getMonth());
   const [customInicio, setCustomInicio] = useState<string>(() => {
     const d = new Date();
     d.setDate(1);
@@ -151,10 +168,36 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
     getIntervaloPeriodo('mes_atual')
   );
 
+  const navegarMes = (delta: number) => {
+    let novoAno = anoRef;
+    let novoMes = mesRef + delta;
+    if (novoMes > 11) {
+      novoMes = 0;
+      novoAno += 1;
+    } else if (novoMes < 0) {
+      novoMes = 11;
+      novoAno -= 1;
+    }
+    setAnoRef(novoAno);
+    setMesRef(novoMes);
+    setTipoPeriodo('mes_especifico');
+
+    const range = getIntervaloPeriodo('mes_especifico', undefined, undefined, novoAno, novoMes);
+    setPeriodoAtivo(range);
+    onPeriodoChange?.(range.inicio, range.fim);
+  };
+
   const handleSelecionarPeriodo = (novoTipo: TipoPeriodo) => {
     setTipoPeriodo(novoTipo);
     if (novoTipo === 'customizado') {
       const range = getIntervaloPeriodo('customizado', customInicio, customFim);
+      setPeriodoAtivo(range);
+      onPeriodoChange?.(range.inicio, range.fim);
+    } else if (novoTipo === 'mes_atual') {
+      const agora = new Date();
+      setAnoRef(agora.getFullYear());
+      setMesRef(agora.getMonth());
+      const range = getIntervaloPeriodo('mes_atual');
       setPeriodoAtivo(range);
       onPeriodoChange?.(range.inicio, range.fim);
     } else {
@@ -345,55 +388,115 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
         </div>
       </div>
 
-      {/* Seletor de Período dos Gráficos e KPIs */}
+      {/* Seletor de Período dos Gráficos e KPIs com Navegador Mensal Touch-Friendly */}
       <div className="bg-card border border-border rounded-xl p-3 sm:p-4 shadow-2xs space-y-3">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-              <CalendarBlank size={16} weight="duotone" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-foreground">Período de Análise:</span>
-                <span className="text-xs font-semibold text-primary">
-                  {getIntervaloPeriodo(tipoPeriodo, customInicio, customFim).rotulo}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          
+          {/* Navegador Mensal com Setas (< Mês Ano >) */}
+          <div className="flex items-center justify-between sm:justify-start gap-1 sm:gap-2 bg-secondary/50 p-1 rounded-xl border border-border/70 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => navegarMes(-1)}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background active:scale-95 transition-all cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center shrink-0"
+              title="Mês anterior"
+              aria-label="Mês anterior"
+            >
+              <CaretLeft size={16} weight="bold" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('mes_atual')}
+              className="flex-1 sm:flex-initial px-3 py-1 rounded-lg flex items-center justify-center gap-2 hover:bg-background/80 transition-colors cursor-pointer text-center"
+              title="Ir para o mês atual"
+            >
+              <CalendarBlank size={16} weight="duotone" className="text-primary shrink-0" />
+              <div className="text-left">
+                <span className="text-xs sm:text-sm font-bold text-foreground block leading-tight">
+                  {periodoAtivo.rotulo}
                 </span>
+                {periodoAtivo.inicio && periodoAtivo.fim ? (
+                  <span className="text-[10px] text-muted-foreground block leading-none">
+                    {periodoAtivo.inicio.split('-').reverse().join('/')} a {periodoAtivo.fim.split('-').reverse().join('/')}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground block leading-none">Todo o histórico</span>
+                )}
               </div>
-              {periodoAtivo.inicio && periodoAtivo.fim ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {periodoAtivo.inicio.split('-').reverse().join('/')} até {periodoAtivo.fim.split('-').reverse().join('/')}
-                </p>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">Todo o histórico de registros</p>
-              )}
-            </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navegarMes(1)}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background active:scale-95 transition-all cursor-pointer min-h-[38px] min-w-[38px] flex items-center justify-center shrink-0"
+              title="Próximo mês"
+              aria-label="Próximo mês"
+            >
+              <CaretRight size={16} weight="bold" />
+            </button>
           </div>
 
-          {/* Atalhos Rápidos (Pills) com Scroll Horizontal Touch-Friendly */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 lg:pb-0 text-xs -mx-1 px-1">
-            {(
-              [
-                { id: 'mes_atual', label: 'Este Mês' },
-                { id: 'mes_anterior', label: 'Mês Anterior' },
-                { id: 'ultimos_30_dias', label: '30 Dias' },
-                { id: 'ano_atual', label: 'Este Ano' },
-                { id: 'tudo', label: 'Tudo' },
-                { id: 'customizado', label: 'Personalizado' },
-              ] as const
-            ).map((opcao) => (
-              <button
-                key={opcao.id}
-                type="button"
-                onClick={() => handleSelecionarPeriodo(opcao.id)}
-                className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer flex items-center justify-center shrink-0 ${
-                  tipoPeriodo === opcao.id
-                    ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
-                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
-                }`}
-              >
-                {opcao.label}
-              </button>
-            ))}
+          {/* Atalhos Rápidos de Período (Pills) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs -mx-1 px-1">
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('mes_atual')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'mes_atual' || (tipoPeriodo === 'mes_especifico' && mesRef === new Date().getMonth() && anoRef === new Date().getFullYear())
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Este Mês
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('ultimos_30_dias')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'ultimos_30_dias'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              30 Dias
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('ano_atual')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'ano_atual'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Este Ano
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('tudo')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'tudo'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Tudo
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelecionarPeriodo('customizado')}
+              className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                tipoPeriodo === 'customizado'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                  : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+              }`}
+            >
+              Personalizado
+            </button>
           </div>
         </div>
 
