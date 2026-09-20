@@ -17,6 +17,7 @@ import {
   CreditCard,
   ArrowsClockwise,
   ListBullets,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 import { CartaoCredito, Categoria, FiltrosTransacao, ResumoAnalitico, Transacao, TransacaoRecorrente } from './types';
 import { apiService } from './services/api';
@@ -28,9 +29,11 @@ import { ModalCategoria } from './components/ModalCategoria';
 import { ModalEditarTransacao } from './components/ModalEditarTransacao';
 import { ModalNovaTransacao } from './components/ModalNovaTransacao';
 import { ModalAuth } from './components/ModalAuth';
+import { ModalInstalarApp } from './components/ModalInstalarApp';
 import { ModuloCartoes } from './components/ModuloCartoes';
 import { ModuloRecorrencias } from './components/ModuloRecorrencias';
 import { useTheme } from './hooks/useTheme';
+import { usePWAInstall } from './hooks/usePWAInstall';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/useAuth';
 
@@ -66,7 +69,22 @@ function AppContent() {
   const [transacaoEmEdicao, setTransacaoEmEdicao] = useState<Transacao | null>(null);
   const [modalEditarAberto, setModalEditarAberto] = useState(false);
   const [modalAuthAberto, setModalAuthAberto] = useState(false);
+  const [modalInstalarAberto, setModalInstalarAberto] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+
+  // Gerenciamento de instalação PWA / WebApp
+  const { isStandalone, isIOS, canPromptDirectly, instalar } = usePWAInstall();
+
+  const handleClicarInstalar = async () => {
+    if (canPromptDirectly) {
+      const res = await instalar();
+      if (res === 'unavailable' || res === 'ios') {
+        setModalInstalarAberto(true);
+      }
+    } else {
+      setModalInstalarAberto(true);
+    }
+  };
 
   const carregarCategorias = useCallback(async () => {
     try {
@@ -311,6 +329,19 @@ function AppContent() {
               </div>
             )}
 
+            {/* Botão de Instalar PWA / WebApp (quando não estiver rodando em modo standalone) */}
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={handleClicarInstalar}
+                title="Instalar FinançasApp como aplicativo no seu dispositivo"
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold shadow-2xs transition-all cursor-pointer shrink-0"
+              >
+                <DownloadSimple size={15} weight="bold" />
+                <span className="hidden sm:inline">Instalar App</span>
+              </button>
+            )}
+
             {/* Alternador de Modo Claro / Modo Escuro */}
             <button
               onClick={toggleTheme}
@@ -329,6 +360,16 @@ function AppContent() {
       </header>
 
       {/* Modais da Aplicação */}
+      <ModalInstalarApp
+        isOpen={modalInstalarAberto}
+        onClose={() => setModalInstalarAberto(false)}
+        isIOS={isIOS}
+        canPromptDirectly={canPromptDirectly}
+        onInstalar={async () => {
+          await instalar();
+        }}
+      />
+
       <ModalAuth
         isOpen={modalAuthAberto}
         onClose={() => setModalAuthAberto(false)}
@@ -551,8 +592,18 @@ function AppContent() {
 
       {/* Footer */}
       <footer className="border-t border-border py-4 mt-8 bg-card/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center text-xs text-muted-foreground">
-          FinançasApp — Controle de gastos pessoais inteligente para você economizar mais
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left text-xs text-muted-foreground">
+          <span>FinançasApp — Controle de gastos pessoais inteligente para você economizar mais</span>
+          {!isStandalone && (
+            <button
+              type="button"
+              onClick={() => setModalInstalarAberto(true)}
+              className="text-primary hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+            >
+              <DownloadSimple size={13} weight="bold" />
+              <span>Instalar como Aplicativo (PWA)</span>
+            </button>
+          )}
         </div>
       </footer>
 
