@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   CreditCard,
   Plus,
   PencilSimple,
   Trash,
   ChartDonut,
+  CaretLeft,
+  CaretRight,
 } from '@phosphor-icons/react';
 import { CartaoCredito, FaturaCartaoResumo } from '../types';
 import { apiService } from '../services/api';
@@ -13,40 +15,81 @@ import { ModalCartao } from './ModalCartao';
 interface ModuloCartoesProps {
   cartoes: CartaoCredito[];
   onCartaoAtualizado: () => void;
+  versaoTransacoes?: number;
 }
 
 const formatBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-const mesAtual = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+const formatarMesReferencia = (mesRef?: string) => {
+  if (!mesRef || !mesRef.includes('-')) return mesRef || '';
+  const [ano, mes] = mesRef.split('-');
+  const mesesNomes = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+  const idx = parseInt(mes, 10) - 1;
+  return `${mesesNomes[idx] || mes} de ${ano}`;
 };
 
-export const ModuloCartoes: React.FC<ModuloCartoesProps> = ({ cartoes, onCartaoAtualizado }) => {
+export const ModuloCartoes: React.FC<ModuloCartoesProps> = ({
+  cartoes,
+  onCartaoAtualizado,
+  versaoTransacoes = 0,
+}) => {
   const [modalAberto, setModalAberto] = useState(false);
   const [cartaoEditando, setCartaoEditando] = useState<CartaoCredito | null>(null);
   const [faturas, setFaturas] = useState<Record<number, FaturaCartaoResumo>>({});
+  const [mesesPorCartao, setMesesPorCartao] = useState<Record<number, string>>({});
   const [carregandoFatura, setCarregandoFatura] = useState<number | null>(null);
   const [faturaExpandida, setFaturaExpandida] = useState<number | null>(null);
   const [excluindo, setExcluindo] = useState<number | null>(null);
 
-  const handleVerFatura = async (cartao: CartaoCredito) => {
-    if (faturaExpandida === cartao.id) {
-      setFaturaExpandida(null);
-      return;
-    }
-    setCarregandoFatura(cartao.id);
+  const carregarFaturaDoCartao = async (cartaoId: number, mesRef?: string) => {
+    setCarregandoFatura(cartaoId);
     try {
-      const fatura = await apiService.getFaturaCartao(cartao.id, mesAtual());
-      setFaturas((prev) => ({ ...prev, [cartao.id]: fatura }));
-      setFaturaExpandida(cartao.id);
+      const fatura = await apiService.getFaturaCartao(cartaoId, mesRef);
+      setFaturas((prev) => ({ ...prev, [cartaoId]: fatura }));
+      setMesesPorCartao((prev) => ({ ...prev, [cartaoId]: fatura.mes_referencia }));
     } catch {
       // silencioso
     } finally {
       setCarregandoFatura(null);
     }
   };
+
+  const mudarMesFatura = async (cartaoId: number, delta: number) => {
+    const mesAtualStr = mesesPorCartao[cartaoId] || faturas[cartaoId]?.mes_referencia;
+    if (!mesAtualStr) return;
+    const [anoStr, mesStr] = mesAtualStr.split('-');
+    let ano = parseInt(anoStr, 10);
+    let mes = parseInt(mesStr, 10) + delta;
+    if (mes > 12) {
+      mes = 1;
+      ano += 1;
+    } else if (mes < 1) {
+      mes = 12;
+      ano -= 1;
+    }
+    const novoMes = `${ano}-${String(mes).padStart(2, '0')}`;
+    await carregarFaturaDoCartao(cartaoId, novoMes);
+  };
+
+  const handleVerFatura = async (cartao: CartaoCredito) => {
+    if (faturaExpandida === cartao.id) {
+      setFaturaExpandida(null);
+      return;
+    }
+    setFaturaExpandida(cartao.id);
+    await carregarFaturaDoCartao(cartao.id, mesesPorCartao[cartao.id]);
+  };
+
+  // Recarrega automaticamente a fatura do cartão expandido quando transações mudarem
+  useEffect(() => {
+    if (faturaExpandida !== null) {
+      carregarFaturaDoCartao(faturaExpandida, mesesPorCartao[faturaExpandida]);
+    }
+  }, [versaoTransacoes, cartoes]);
 
   const handleDeletar = async (cartao: CartaoCredito) => {
     if (!confirm(`Deletar cartão "${cartao.nome}"? As transações associadas serão mantidas.`)) return;
@@ -148,7 +191,7 @@ export const ModuloCartoes: React.FC<ModuloCartoesProps> = ({ cartoes, onCartaoA
                   >
                     <span className="flex items-center gap-1.5">
                       <ChartDonut size={13} weight="duotone" className="text-violet-400" />
-                      {isExpanded ? 'Ocultar fatura' : 'Ver fatura atual'}
+                      {isExpanded ? 'Ocultar fatura' : 'Ver fatura do cartão'}
                     </span>
                     {carregando && (
                       <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
@@ -156,12 +199,39 @@ export const ModuloCartoes: React.FC<ModuloCartoesProps> = ({ cartoes, onCartaoA
                   </button>
 
                   {isExpanded && fatura && (
-                    <div className="mt-2 space-y-2 animate-in fade-in duration-150">
-                      {/* Barra de utilização */}
+                    <div className="mt-2 space-y-2.5 animate-in fade-in duration-150">
+                      {/* Seletor de Mês da Fatura */}
+                      <div className="flex items-center justify-between px-2 py-1 bg-muted/60 rounded-lg text-xs">
+                        <button
+                          type="button"
+                          onClick={() => mudarMesFatura(cartao.id, -1)}
+                          disabled={carregando}
+                          className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40"
+                          title="Fatura anterior"
+                        >
+                          <CaretLeft size={13} weight="bold" />
+                        </button>
+                        <span className="font-semibold text-[11px] text-foreground tracking-wide">
+                          Fatura de {formatarMesReferencia(fatura.mes_referencia)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => mudarMesFatura(cartao.id, 1)}
+                          disabled={carregando}
+                          className="p-1 rounded hover:bg-background text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40"
+                          title="Próxima fatura"
+                        >
+                          <CaretRight size={13} weight="bold" />
+                        </button>
+                      </div>
+
+                      {/* Barra de utilização total do limite */}
                       <div className="space-y-1">
                         <div className="flex justify-between text-[11px]">
-                          <span className="text-muted-foreground">Utilizado</span>
-                          <span className="font-medium text-foreground">{fatura.percentual_utilizado.toFixed(0)}%</span>
+                          <span className="text-muted-foreground">Limite Total Comprometido</span>
+                          <span className="font-medium text-foreground">
+                            {fatura.percentual_utilizado.toFixed(0)}% ({formatBRL(fatura.limite_utilizado)})
+                          </span>
                         </div>
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
@@ -178,19 +248,25 @@ export const ModuloCartoes: React.FC<ModuloCartoesProps> = ({ cartoes, onCartaoA
                           />
                         </div>
                       </div>
+
                       <div className="grid grid-cols-2 gap-2 text-[11px]">
                         <div className="p-2 bg-muted/50 rounded-lg">
-                          <p className="text-muted-foreground">Fatura</p>
+                          <p className="text-muted-foreground">Nesta Fatura</p>
                           <p className="font-semibold text-foreground">{formatBRL(fatura.total_fatura)}</p>
                         </div>
                         <div className="p-2 bg-muted/50 rounded-lg">
-                          <p className="text-muted-foreground">Disponível</p>
+                          <p className="text-muted-foreground">Limite Disponível</p>
                           <p className="font-semibold text-emerald-500">{formatBRL(fatura.limite_disponivel)}</p>
                         </div>
                       </div>
-                      {fatura.qtd_parcelas_abertas > 0 && (
+
+                      {fatura.qtd_parcelas_abertas > 0 ? (
                         <p className="text-[10px] text-muted-foreground">
-                          {fatura.qtd_parcelas_abertas} parcela(s) em aberto
+                          {fatura.qtd_parcelas_abertas} compra(s)/parcela(s) nesta fatura
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground italic">
+                          Nenhum lançamento para este mês
                         </p>
                       )}
                     </div>

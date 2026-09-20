@@ -58,6 +58,7 @@ function AppContent() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [filtros, setFiltros] = useState<FiltrosTransacao>(FILTROS_INICIAIS);
   const [tabAtiva, setTabAtiva] = useState<'extrato' | 'cartoes' | 'recorrencias'>('extrato');
+  const [versaoTransacoes, setVersaoTransacoes] = useState(0);
 
   // Modais
   const [modalCategoriaAberto, setModalCategoriaAberto] = useState(false);
@@ -145,8 +146,10 @@ function AppContent() {
   }, [isAuthenticated, carregarResumo, carregarTransacoes, carregarCartoes, carregarRecorrencias]);
 
   const handleTransacaoCriada = () => {
+    setVersaoTransacoes((v) => v + 1);
     carregarTransacoes();
     carregarResumo();
+    carregarCartoes();
   };
 
   const handleCategoriaCriada = (nova: Categoria) => {
@@ -156,8 +159,10 @@ function AppContent() {
   const handleExcluir = async (id: number) => {
     try {
       await apiService.deletarTransacao(id);
+      setVersaoTransacoes((v) => v + 1);
       carregarTransacoes();
       carregarResumo();
+      carregarCartoes();
     } catch {
       alert('Não foi possível excluir a transação.');
     }
@@ -166,8 +171,10 @@ function AppContent() {
   const handleExcluirEmLote = async (ids: number[]) => {
     try {
       await apiService.deletarTransacoesEmLote(ids);
+      setVersaoTransacoes((v) => v + 1);
       carregarTransacoes();
       carregarResumo();
+      carregarCartoes();
     } catch {
       alert('Não foi possível excluir as transações selecionadas.');
     }
@@ -179,8 +186,10 @@ function AppContent() {
   };
 
   const handleTransacaoAtualizada = () => {
+    setVersaoTransacoes((v) => v + 1);
     carregarTransacoes();
     carregarResumo();
+    carregarCartoes();
   };
 
   const abrirModalAuth = (tab: 'login' | 'register' = 'login') => {
@@ -502,6 +511,7 @@ function AppContent() {
                   <ModuloCartoes
                     cartoes={cartoes}
                     onCartaoAtualizado={() => { carregarCartoes(); carregarTransacoes(); }}
+                    versaoTransacoes={versaoTransacoes}
                   />
                 </div>
               )}

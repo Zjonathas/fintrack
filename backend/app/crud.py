@@ -304,7 +304,7 @@ def _avancar_mes(dt: date) -> date:
     return dt.replace(year=ano, month=mes, day=min(dt.day, ultimo_dia))
 
 
-def get_fatura_cartao(db: Session, cartao_id: int, usuario_id: int, mes_referencia: Optional[str] = None) -> schemas.FaturaCartaoResumo:
+def get_fatura_cartao(db: Session, cartao_id: int, usuario_id: int, mes_referencia: Optional[str] = None) -> Optional[schemas.FaturaCartaoResumo]:
     """Calcula o resumo da fatura de um cartao para o mes de referencia (YYYY-MM)."""
     cartao = get_cartao_by_id(db, cartao_id, usuario_id)
     if not cartao:
@@ -314,12 +314,14 @@ def get_fatura_cartao(db: Session, cartao_id: int, usuario_id: int, mes_referenc
     if mes_referencia:
         ano, mes = int(mes_referencia[:4]), int(mes_referencia[5:7])
     else:
-        ano, mes = hoje.year, hoje.month
+        # Se mes_referencia nao foi especificado, determina a data de vencimento da fatura atualmente aberta
+        data_fatura_atual = _calcular_data_primeira_parcela(hoje, cartao)
+        ano, mes = data_fatura_atual.year, data_fatura_atual.month
 
     primeiro_dia = date(ano, mes, 1)
     ultimo_dia = date(ano, mes, monthrange(ano, mes)[1])
 
-    transacoes = (
+    transacoes_mes = (
         db.query(models.Transacao)
         .filter(
             models.Transacao.cartao_id == cartao_id,
@@ -330,19 +332,30 @@ def get_fatura_cartao(db: Session, cartao_id: int, usuario_id: int, mes_referenc
         .all()
     )
 
-    total_fatura = sum(t.valor_produto for t in transacoes)
-    limite_disponivel = round(cartao.limite - total_fatura, 2)
-    percentual = round((total_fatura / cartao.limite * 100), 2) if cartao.limite > 0 else 0.0
+    total_fatura = sum(t.valor_produto for t in transacoes_mes)
+
+    # Limite total utilizado no cartao considera todas as transacoes ativas do usuario neste cartao
+    todas_transacoes = (
+        db.query(models.Transacao)
+        .filter(
+            models.Transacao.cartao_id == cartao_id,
+            models.Transacao.usuario_id == usuario_id,
+        )
+        .all()
+    )
+    total_comprometido = sum(t.valor_produto for t in todas_transacoes)
+    limite_disponivel = round(cartao.limite - total_comprometido, 2)
+    percentual = round((total_comprometido / cartao.limite * 100), 2) if cartao.limite > 0 else 0.0
 
     return schemas.FaturaCartaoResumo(
         cartao_id=cartao.id,
         cartao_nome=cartao.nome,
         mes_referencia=f'{ano:04d}-{mes:02d}',
         total_fatura=round(total_fatura, 2),
-        limite_utilizado=round(total_fatura, 2),
+        limite_utilizado=round(total_comprometido, 2),
         limite_disponivel=max(0.0, limite_disponivel),
         percentual_utilizado=percentual,
-        qtd_parcelas_abertas=len(transacoes),
+        qtd_parcelas_abertas=len(transacoes_mes),
     )
 
 
@@ -434,12 +447,18 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
         return primeira_transacao
     else:
         # Transacao simples (avista ou qualquer outra forma)
+        data_final = transacao.data
+        if transacao.forma_pagamento == 'credito' and transacao.cartao_id:
+            cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
+            if cartao:
+                data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
+
         db_transacao = models.Transacao(
             descricao=transacao.descricao.strip(),
             valor_produto=round(transacao.valor_produto, 2),
             teve_entrega=False if transacao.tipo == 'receita' else transacao.teve_entrega,
             valor_entrega=0.0 if transacao.tipo == 'receita' else (round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0),
-            data=transacao.data,
+            data=data_final,
             categoria_id=None if transacao.tipo == 'receita' else transacao.categoria_id,
             usuario_id=usuario_id,
             tipo=transacao.tipo,
@@ -481,7 +500,12 @@ def update_transacao(db: Session, transacao_id: int, transacao: schemas.Transaca
     db_transacao.valor_produto = round(transacao.valor_produto, 2)
     db_transacao.teve_entrega = False if transacao.tipo == 'receita' else transacao.teve_entrega
     db_transacao.valor_entrega = 0.0 if transacao.tipo == 'receita' else (round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0)
-    db_transacao.data = transacao.data
+    data_final = transacao.data
+    if transacao.forma_pagamento == 'credito' and db_transacao.cartao_id and (db_transacao.total_parcelas or 1) <= 1:
+        cartao = get_cartao_by_id(db, db_transacao.cartao_id, usuario_id)
+        if cartao:
+            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
+    db_transacao.data = data_final
     db_transacao.categoria_id = None if transacao.tipo == 'receita' else transacao.categoria_id
     db_transacao.tipo = transacao.tipo
     db_transacao.forma_pagamento = transacao.forma_pagamento

@@ -450,10 +450,15 @@ def remover_cartao(
 )
 def obter_fatura_cartao(
     cartao_id: int,
-    mes_referencia: Optional[str] = Query(None, description="Mês de referência no formato YYYY-MM. Padrão: mês atual."),
+    mes_referencia: Optional[str] = Query(None, description="Mês de referência no formato YYYY-MM. Padrão: fatura aberta atual."),
+    ano: Optional[int] = Query(None, description="Ano de referência (ex: 2026)"),
+    mes: Optional[int] = Query(None, description="Mês de referência (1-12)"),
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
+    if not mes_referencia and ano is not None and mes is not None:
+        mes_referencia = f"{ano:04d}-{mes:02d}"
+
     resultado = crud.get_fatura_cartao(db=db, cartao_id=cartao_id, usuario_id=current_user.id, mes_referencia=mes_referencia)
     if not resultado:
         raise HTTPException(
