@@ -1,3 +1,4 @@
+import os
 import re
 from contextlib import asynccontextmanager
 from datetime import date
@@ -67,10 +68,19 @@ def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
     )
 
 
-# Configuração de CORS para permitir acesso do frontend React/Vite
+# Configuração de CORS segura com suporte a variáveis de ambiente e regex para rede local/túneis
+cors_origins_env = os.getenv("CORS_ORIGINS")
+if cors_origins_env:
+    origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+    allow_all = False
+else:
+    origins = ["*"]
+    allow_all = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins if not allow_all else [],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|.*\.trycloudflare\.com)(:\d+)?" if allow_all else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

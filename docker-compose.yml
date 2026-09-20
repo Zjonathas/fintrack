@@ -12,6 +12,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=sqlite:///./financas.db
+      - SECRET_KEY=${SECRET_KEY:-fintrack_super_secret_jwt_key_2026_financas_app_secure_key_32bytes}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
     networks:
       - financas_network
 

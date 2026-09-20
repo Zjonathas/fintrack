@@ -112,4 +112,25 @@ Thumbs.db
 .antigravity/
 .system_generated/
 
+# ==========================================
+# Certificados, Chaves e Credenciais
+# ==========================================
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+*.p12
+.cloudflared/
+cert.pem
+credentials.json
+
+# ==========================================
+# Gravações de Tela, Vídeos e Mídias de Debug
+# ==========================================
 Video_Erro/
+*.mp4
+*.webm
+*.mov
+*.avi
+*.mkv

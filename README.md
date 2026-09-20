@@ -63,13 +63,13 @@ O **FinançasApp** foi concebido para transformar a organização financeira em 
 
 | Camada | Tecnologias |
 |---|---|
-| **Backend** | Python 3.12+ / 3.13, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyJWT, Passlib (Bcrypt), Uvicorn |
+| **Backend** | Python 3.12+ / 3.13, FastAPI, SQLAlchemy 2.0, Pydantic v2, PyJWT, Bcrypt, Uvicorn |
 | **Banco de Dados** | SQLite com integridade referencial ativa (`PRAGMA foreign_keys = ON`) |
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS |
 | **PWA & Mobile** | Web App Manifest (W3C), Service Worker, Ícones Adaptativos (Maskable + SVG) |
 | **Visualização & UI** | Phosphor Icons, Recharts, React Portal, Axios |
 | **Testes** | Pytest, HTTPX, FastAPI TestClient |
-| **DevOps & Containers** | Docker, Docker Compose |
+| **DevOps & Containers** | Docker, Docker Compose, Cloudflare Tunnel (`cloudflared`) |
 
 ---
 
@@ -150,6 +150,12 @@ Acesse no navegador:
 - **Frontend / WebApp**: [http://localhost:5173](http://localhost:5173)
 - **API Backend**: [http://localhost:8000](http://localhost:8000)
 - **Documentação Swagger (OpenAPI)**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Túnel HTTPS Seguro (Para Instalação PWA no Celular sem Barras)**:
+  O Docker Compose já inclui um túnel Cloudflare seguro que gera automaticamente uma URL com HTTPS válido para instalação de PWA no celular:
+  ```bash
+  docker compose logs tunnel
+  ```
+  *(Exemplo de saída: `https://xxxx.trycloudflare.com` — acesse pelo smartphone para instalar o PWA em tela cheia com certificado SSL ativo)*.
 
 Para parar os serviços:
 ```bash
@@ -173,7 +179,7 @@ python -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 #### 2. Frontend
