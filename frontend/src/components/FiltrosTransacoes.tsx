@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Funnel,
   MagnifyingGlass,
@@ -6,6 +6,8 @@ import {
   Tag,
   Truck,
   CalendarBlank,
+  CaretDown,
+  CaretUp,
 } from '@phosphor-icons/react';
 import { Categoria, FiltrosTransacao, TipoTransacao } from '../types';
 import { Select } from './Select';
@@ -26,13 +28,17 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
   onFiltroChange,
   onLimparFiltros,
 }) => {
-  const temFiltroAtivo =
-    Boolean(filtros.busca) ||
-    (filtros.categoria_id !== '' && filtros.categoria_id !== undefined) ||
-    (filtros.teve_entrega !== '' && filtros.teve_entrega !== undefined) ||
-    Boolean(filtros.data_inicio) ||
-    Boolean(filtros.data_fim) ||
-    (filtros.tipo !== '' && filtros.tipo !== undefined);
+  const [filtrosAbertosMobile, setFiltrosAbertosMobile] = useState(false);
+
+  const filtrosAvancadosAtivos = [
+    filtros.categoria_id !== '' && filtros.categoria_id !== undefined,
+    filtros.teve_entrega !== '' && filtros.teve_entrega !== undefined,
+    Boolean(filtros.data_inicio),
+    Boolean(filtros.data_fim),
+    filtros.tipo !== '' && filtros.tipo !== undefined,
+  ].filter(Boolean).length;
+
+  const temFiltroAtivo = Boolean(filtros.busca) || filtrosAvancadosAtivos > 0;
 
   return (
     <div className="card p-4 space-y-3">
@@ -44,34 +50,59 @@ export const FiltrosTransacoes: React.FC<FiltrosTransacoesProps> = ({
             ({totalEncontrados} {totalEncontrados === 1 ? 'encontrada' : 'encontradas'})
           </span>
         </div>
-        {temFiltroAtivo && (
+        <div className="flex items-center gap-2">
+          {temFiltroAtivo && (
+            <button
+              onClick={onLimparFiltros}
+              className="text-xs text-destructive hover:underline flex items-center gap-1 font-medium transition-colors cursor-pointer"
+            >
+              <ArrowCounterClockwise size={12} weight="bold" />
+              <span>Limpar</span>
+            </button>
+          )}
+
+          {/* Botão de Toggle de Filtros Avançados no Mobile */}
           <button
-            onClick={onLimparFiltros}
-            className="text-xs text-destructive hover:underline flex items-center gap-1 font-medium transition-colors"
+            type="button"
+            onClick={() => setFiltrosAbertosMobile((v) => !v)}
+            className="sm:hidden flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border border-border bg-secondary text-secondary-foreground hover:bg-accent transition-colors cursor-pointer"
           >
-            <ArrowCounterClockwise size={12} weight="bold" />
-            <span>Limpar filtros</span>
+            <span>Filtros</span>
+            {filtrosAvancadosAtivos > 0 && (
+              <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {filtrosAvancadosAtivos}
+              </span>
+            )}
+            {filtrosAbertosMobile ? <CaretUp size={12} /> : <CaretDown size={12} />}
           </button>
-        )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Busca */}
-        <div>
-          <label htmlFor="filtro-busca" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-            <MagnifyingGlass size={13} weight="bold" />
-            <span>Buscar</span>
-          </label>
+      {/* Campo de Busca Rápida (Sempre Visível) */}
+      <div>
+        <div className="relative">
+          <MagnifyingGlass
+            size={16}
+            weight="bold"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          />
           <input
             id="filtro-busca"
             type="text"
-            placeholder="Nome ou descrição..."
+            placeholder="Buscar por descrição..."
             value={filtros.busca || ''}
             onChange={(e) => onFiltroChange({ ...filtros, busca: e.target.value })}
-            className="w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-input rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
           />
         </div>
+      </div>
 
+      {/* Grid de Filtros: Retrátil no Mobile (< sm), Grid aberto no Desktop (>= sm) */}
+      <div
+        className={`${
+          filtrosAbertosMobile ? 'block' : 'hidden'
+        } sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 border-t border-border/60 sm:border-t-0 sm:pt-0 animate-in fade-in duration-150`}
+      >
         {/* Categoria */}
         <div>
           <label htmlFor="filtro-categoria" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">

@@ -369,8 +369,8 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             </div>
           </div>
 
-          {/* Atalhos Rápidos (Pills) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 text-xs">
+          {/* Atalhos Rápidos (Pills) com Scroll Horizontal Touch-Friendly */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 lg:pb-0 text-xs -mx-1 px-1">
             {(
               [
                 { id: 'mes_atual', label: 'Este Mês' },
@@ -385,7 +385,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
                 key={opcao.id}
                 type="button"
                 onClick={() => handleSelecionarPeriodo(opcao.id)}
-                className={`px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
+                className={`min-h-[34px] px-2.5 sm:px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                   tipoPeriodo === opcao.id
                     ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
                     : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
@@ -402,7 +402,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3 border-t border-border/60 animate-in fade-in duration-150">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">De:</span>
-              <div className="w-36">
+              <div className="w-full sm:w-36">
                 <DatePicker
                   value={customInicio}
                   onChange={(val) => setCustomInicio(val)}
@@ -412,7 +412,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Até:</span>
-              <div className="w-36">
+              <div className="w-full sm:w-36">
                 <DatePicker
                   value={customFim}
                   onChange={(val) => setCustomFim(val)}
@@ -423,7 +423,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             <button
               type="button"
               onClick={handleAplicarCustomizado}
-              className="px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold border border-primary/20 transition-colors cursor-pointer self-start sm:self-auto"
+              className="min-h-[36px] px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shadow-xs transition-colors cursor-pointer self-stretch sm:self-auto flex items-center justify-center"
             >
               Filtrar Gráficos
             </button>
@@ -431,22 +431,24 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
         )}
       </div>
 
-      {/* KPI Cards Estruturados */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards Estruturados com Tipografia Fluida */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className={`card p-4 space-y-2 border transition-all duration-200 hover:shadow-sm ${kpi.border}`}
+            className={`card p-3 sm:p-4 space-y-1 sm:space-y-2 border transition-all duration-200 hover:shadow-sm ${kpi.border}`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground tracking-wide uppercase truncate">
                 {kpi.label}
               </span>
-              <div className="p-1.5 rounded-md bg-secondary/80">{kpi.icon}</div>
+              <div className="p-1 sm:p-1.5 rounded-md bg-secondary/80 shrink-0">{kpi.icon}</div>
             </div>
             <div>
-              <p className={`text-2xl font-bold tabular-nums ${kpi.valueClass || 'text-foreground'}`}>{kpi.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{kpi.detail}</p>
+              <p className={`text-base sm:text-2xl font-bold tabular-nums truncate ${kpi.valueClass || 'text-foreground'}`} title={kpi.value}>
+                {kpi.value}
+              </p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">{kpi.detail}</p>
             </div>
           </div>
         ))}
@@ -455,9 +457,9 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       {/* Barra de Proporção Produtos vs. Fretes */}
       {total_geral > 0 && (
         <div className="card p-4 space-y-2">
-          <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-muted-foreground gap-1.5 sm:gap-2">
             <span className="font-medium text-foreground">Composição do Orçamento</span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary" />
                 Produtos: <strong className="text-foreground">{percProdutos}%</strong> ({formatBRL(total_produtos)})
@@ -677,7 +679,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
                         key={cat.categoria_id}
                         className="p-3.5 rounded-lg border border-border/70 hover:bg-secondary/40 transition-colors"
                       >
-                        <div className="flex items-center justify-between text-sm mb-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm gap-1 sm:gap-2 mb-1.5">
                           <div className="flex items-center gap-2">
                             <span
                               className="w-3 h-3 rounded-full shrink-0"
@@ -686,7 +688,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
                             <span className="font-semibold text-foreground">{cat.categoria_nome}</span>
                             <span className="text-xs text-muted-foreground">({percTotal}%)</span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs tabular-nums">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs tabular-nums justify-between sm:justify-end">
                             <span className="text-muted-foreground">{cat.quantidade} compras</span>
                             {cat.total_entrega > 0 && (
                               <span className="text-warning font-medium">

@@ -120,12 +120,17 @@ export const ModalCartao: React.FC<ModalCartaoProps> = ({ isOpen, onClose, carta
 
   return (
     <div
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150"
       onClick={(e) => { if (e.target === e.currentTarget && !submetendo) onClose(); }}
     >
-      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[88vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+        {/* Indicador visual de arrasto no topo para mobile */}
+        <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center bg-card shrink-0">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+
         {/* Header */}
-        <div className="shrink-0 p-5 border-b border-border flex items-center justify-between">
+        <div className="shrink-0 px-4 py-3 sm:p-5 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-lg bg-violet-500/10 text-violet-500">
               <CreditCard size={20} weight="duotone" />
@@ -137,7 +142,7 @@ export const ModalCartao: React.FC<ModalCartaoProps> = ({ isOpen, onClose, carta
               <p className="text-xs text-muted-foreground">Configure seu cartão para rastreamento de faturas</p>
             </div>
           </div>
-          <button onClick={onClose} disabled={submetendo} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer">
+          <button onClick={onClose} disabled={submetendo} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center">
             <X size={18} weight="bold" />
           </button>
         </div>
@@ -263,13 +268,13 @@ export const ModalCartao: React.FC<ModalCartaoProps> = ({ isOpen, onClose, carta
           </div>
         </form>
 
-        {/* Footer */}
-        <div className="shrink-0 p-4 border-t border-border bg-card/95 flex flex-col-reverse sm:flex-row gap-2.5 justify-end">
+        {/* Footer com Safe Area e Touch Targets */}
+        <div className="shrink-0 p-4 border-t border-border bg-card/95 flex flex-col-reverse sm:flex-row gap-2.5 justify-end pb-[max(1rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onClose}
             disabled={submetendo}
-            className="px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-full sm:w-auto min-h-[44px] px-4 py-2 text-xs font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
           >
             Cancelar
           </button>
@@ -278,12 +283,12 @@ export const ModalCartao: React.FC<ModalCartaoProps> = ({ isOpen, onClose, carta
             form=""
             onClick={handleSubmit as unknown as React.MouseEventHandler}
             disabled={submetendo}
-            className="px-4 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            className="w-full sm:w-auto min-h-[44px] px-5 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             {submetendo ? (
               <><div className="w-3.5 h-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /><span>Salvando...</span></>
             ) : (
-              <><FloppyDisk size={14} weight="bold" /><span>{cartao ? 'Salvar Alterações' : 'Criar Cartão'}</span></>
+              <><FloppyDisk size={16} weight="bold" /><span>{cartao ? 'Salvar Alterações' : 'Criar Cartão'}</span></>
             )}
           </button>
         </div>

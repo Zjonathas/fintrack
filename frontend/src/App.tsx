@@ -253,15 +253,14 @@ function AppContent() {
             {/* Ações quando autenticado */}
             {isAuthenticated ? (
               <>
-                {/* Botão para abrir modal de Nova Transação */}
+                {/* Botão para abrir modal de Nova Transação (visível em sm+) */}
                 <button
                   onClick={() => setModalNovaTransacaoAberto(true)}
                   title="Cadastrar nova transação"
-                  className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
                 >
                   <Plus size={15} weight="bold" />
-                  <span className="hidden sm:inline">Nova Transação</span>
-                  <span className="inline sm:hidden">Nova</span>
+                  <span>Nova Transação</span>
                 </button>
 
                 {/* Botão para gerenciar / cadastrar categorias */}
@@ -364,7 +363,7 @@ function AppContent() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-24 sm:pb-8">
         {authLoading ? (
           /* Estado de Carregamento da Sessão */
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
@@ -439,7 +438,7 @@ function AppContent() {
           /* Estado Autenticado: Dashboard Completo e Extrato */
           <>
             {/* Dashboard com KPIs e Gráficos Interativos */}
-            <section>
+            <section id="secao-dashboard">
               <ErrorBoundary>
                 <DashboardResumo
                   resumo={resumo}
@@ -453,7 +452,7 @@ function AppContent() {
             </section>
 
             {/* Tabs de navegação */}
-            <section className="space-y-4">
+            <section id="secao-modulos" className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border shadow-2xs">
                 <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
                   <button
@@ -556,6 +555,96 @@ function AppContent() {
           FinançasApp — Controle de gastos pessoais inteligente para você economizar mais
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar (Fixo no Rodapé em Telas Mobile) */}
+      {isAuthenticated && (
+        <nav
+          aria-label="Navegação móvel"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-lg pb-[max(0.5rem,env(safe-area-inset-bottom))] px-3 pt-1.5"
+        >
+          <div className="flex items-center justify-around max-w-md mx-auto relative">
+            {/* Aba Resumo */}
+            <button
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-lg text-muted-foreground hover:text-foreground active:text-primary transition-colors cursor-pointer"
+            >
+              <ChartPieSlice size={20} weight="duotone" />
+              <span className="text-[10px] font-medium">Resumo</span>
+            </button>
+
+            {/* Aba Extrato */}
+            <button
+              onClick={() => {
+                setTabAtiva('extrato');
+                const el = document.getElementById('secao-modulos');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-lg transition-colors cursor-pointer ${
+                tabAtiva === 'extrato' ? 'text-primary font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ListBullets size={20} weight={tabAtiva === 'extrato' ? 'bold' : 'duotone'} />
+              <span className="text-[10px]">Extrato</span>
+            </button>
+
+            {/* Botão Central FAB: Nova Transação */}
+            <button
+              onClick={() => setModalNovaTransacaoAberto(true)}
+              title="Cadastrar nova transação"
+              className="relative -top-3 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center border-4 border-background active:scale-95 transition-transform cursor-pointer shrink-0"
+              aria-label="Nova Transação"
+            >
+              <Plus size={22} weight="bold" />
+            </button>
+
+            {/* Aba Cartões */}
+            <button
+              onClick={() => {
+                setTabAtiva('cartoes');
+                const el = document.getElementById('secao-modulos');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-lg transition-colors cursor-pointer relative ${
+                tabAtiva === 'cartoes' ? 'text-violet-500 font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <div className="relative">
+                <CreditCard size={20} weight={tabAtiva === 'cartoes' ? 'bold' : 'duotone'} />
+                {cartoes.length > 0 && (
+                  <span className="absolute -top-1 -right-2.5 px-1 min-w-[14px] h-3.5 rounded-full bg-violet-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {cartoes.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px]">Cartões</span>
+            </button>
+
+            {/* Aba Recorrências */}
+            <button
+              onClick={() => {
+                setTabAtiva('recorrencias');
+                const el = document.getElementById('secao-modulos');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-lg transition-colors cursor-pointer relative ${
+                tabAtiva === 'recorrencias' ? 'text-primary font-semibold' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <div className="relative">
+                <ArrowsClockwise size={20} weight={tabAtiva === 'recorrencias' ? 'bold' : 'duotone'} />
+                {recorrencias.length > 0 && (
+                  <span className="absolute -top-1 -right-2.5 px-1 min-w-[14px] h-3.5 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
+                    {recorrencias.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px]">Fixas</span>
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
