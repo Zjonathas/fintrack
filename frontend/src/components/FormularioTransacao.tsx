@@ -91,6 +91,8 @@ export const FormularioTransacao: React.FC<FormularioTransacaoProps> = ({
       valor_entrega: teveEntrega ? numEntrega : 0,
       data: data || hoje(),
       categoria_id: Number(categoriaId),
+      tipo: 'despesa',
+      forma_pagamento: 'dinheiro',
     };
 
     try {

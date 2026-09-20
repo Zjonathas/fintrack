@@ -14,8 +14,11 @@ import {
   ShieldCheck,
   ChartPieSlice,
   TrendUp,
+  CreditCard,
+  ArrowsClockwise,
+  ListBullets,
 } from '@phosphor-icons/react';
-import { Categoria, FiltrosTransacao, ResumoAnalitico, Transacao } from './types';
+import { CartaoCredito, Categoria, FiltrosTransacao, ResumoAnalitico, Transacao, TransacaoRecorrente } from './types';
 import { apiService } from './services/api';
 import { DashboardResumo } from './components/DashboardResumo';
 import { FiltrosTransacoes } from './components/FiltrosTransacoes';
@@ -25,6 +28,8 @@ import { ModalCategoria } from './components/ModalCategoria';
 import { ModalEditarTransacao } from './components/ModalEditarTransacao';
 import { ModalNovaTransacao } from './components/ModalNovaTransacao';
 import { ModalAuth } from './components/ModalAuth';
+import { ModuloCartoes } from './components/ModuloCartoes';
+import { ModuloRecorrencias } from './components/ModuloRecorrencias';
 import { useTheme } from './hooks/useTheme';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './hooks/useAuth';
@@ -35,6 +40,8 @@ const FILTROS_INICIAIS: FiltrosTransacao = {
   data_inicio: '',
   data_fim: '',
   busca: '',
+  tipo: '',
+  cartao_id: '',
 };
 
 function AppContent() {
@@ -44,10 +51,13 @@ function AppContent() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
   const [resumo, setResumo] = useState<ResumoAnalitico | null>(null);
+  const [cartoes, setCartoes] = useState<CartaoCredito[]>([]);
+  const [recorrencias, setRecorrencias] = useState<TransacaoRecorrente[]>([]);
   const [loadingDados, setLoadingDados] = useState(false);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [filtros, setFiltros] = useState<FiltrosTransacao>(FILTROS_INICIAIS);
+  const [tabAtiva, setTabAtiva] = useState<'extrato' | 'cartoes' | 'recorrencias'>('extrato');
 
   // Modais
   const [modalCategoriaAberto, setModalCategoriaAberto] = useState(false);
@@ -94,6 +104,26 @@ function AppContent() {
     }
   }, [isAuthenticated, filtros]);
 
+  const carregarCartoes = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const dados = await apiService.getCartoes();
+      setCartoes(dados);
+    } catch {
+      /* silenciado */
+    }
+  }, [isAuthenticated]);
+
+  const carregarRecorrencias = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const dados = await apiService.getRecorrencias();
+      setRecorrencias(dados);
+    } catch {
+      /* silenciado */
+    }
+  }, [isAuthenticated]);
+
   // Carrega categorias sempre
   useEffect(() => {
     carregarCategorias();
@@ -104,11 +134,15 @@ function AppContent() {
     if (isAuthenticated) {
       carregarResumo();
       carregarTransacoes();
+      carregarCartoes();
+      carregarRecorrencias();
     } else {
       setTransacoes([]);
       setResumo(null);
+      setCartoes([]);
+      setRecorrencias([]);
     }
-  }, [isAuthenticated, carregarResumo, carregarTransacoes]);
+  }, [isAuthenticated, carregarResumo, carregarTransacoes, carregarCartoes, carregarRecorrencias]);
 
   const handleTransacaoCriada = () => {
     carregarTransacoes();
@@ -285,6 +319,7 @@ function AppContent() {
         isOpen={modalNovaTransacaoAberto}
         onClose={() => setModalNovaTransacaoAberto(false)}
         categorias={categorias}
+        cartoes={cartoes}
         onTransacaoCriada={handleTransacaoCriada}
         onCategoriaCriada={handleCategoriaCriada}
       />
@@ -388,38 +423,98 @@ function AppContent() {
               </ErrorBoundary>
             </section>
 
-            {/* Seção do Extrato e Filtros em Largura Total */}
+            {/* Tabs de navegação */}
             <section className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-xl border border-border shadow-2xs">
-                <div>
-                  <h2 className="text-sm sm:text-base font-semibold text-foreground">Extrato & Filtros</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Consulte, filtre por data ou categoria, edite ou exclua despesas em lote
-                  </p>
+                <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+                  <button
+                    onClick={() => setTabAtiva('extrato')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      tabAtiva === 'extrato'
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                    }`}
+                  >
+                    <ListBullets size={14} weight="duotone" />
+                    Extrato
+                  </button>
+                  <button
+                    onClick={() => setTabAtiva('cartoes')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      tabAtiva === 'cartoes'
+                        ? 'bg-violet-500/10 text-violet-500 border border-violet-500/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                    }`}
+                  >
+                    <CreditCard size={14} weight="duotone" />
+                    Cartões
+                    {cartoes.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-500 text-[10px] font-semibold">{cartoes.length}</span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setTabAtiva('recorrencias')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      tabAtiva === 'recorrencias'
+                        ? 'bg-primary/10 text-primary border border-primary/20'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                    }`}
+                  >
+                    <ArrowsClockwise size={14} weight="duotone" />
+                    Recorrências
+                    {recorrencias.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold">{recorrencias.length}</span>
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={() => setModalNovaTransacaoAberto(true)}
-                  className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
-                >
-                  <Plus size={16} weight="bold" />
-                  <span>Cadastrar Nova Despesa</span>
-                </button>
+                {tabAtiva === 'extrato' && (
+                  <button
+                    onClick={() => setModalNovaTransacaoAberto(true)}
+                    className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus size={16} weight="bold" />
+                    <span>Nova Transação</span>
+                  </button>
+                )}
               </div>
 
-              <FiltrosTransacoes
-                filtros={filtros}
-                categorias={categorias}
-                totalEncontrados={transacoes.length}
-                onFiltroChange={setFiltros}
-                onLimparFiltros={() => setFiltros(FILTROS_INICIAIS)}
-              />
-              <ListaTransacoes
-                transacoes={transacoes}
-                loading={loadingDados}
-                onExcluir={handleExcluir}
-                onExcluirEmLote={handleExcluirEmLote}
-                onEditar={handleEditar}
-              />
+              {tabAtiva === 'extrato' && (
+                <>
+                  <FiltrosTransacoes
+                    filtros={filtros}
+                    categorias={categorias}
+                    totalEncontrados={transacoes.length}
+                    onFiltroChange={setFiltros}
+                    onLimparFiltros={() => setFiltros(FILTROS_INICIAIS)}
+                  />
+                  <ListaTransacoes
+                    transacoes={transacoes}
+                    loading={loadingDados}
+                    onExcluir={handleExcluir}
+                    onExcluirEmLote={handleExcluirEmLote}
+                    onEditar={handleEditar}
+                  />
+                </>
+              )}
+
+              {tabAtiva === 'cartoes' && (
+                <div className="bg-card border border-border rounded-xl p-5 shadow-2xs">
+                  <ModuloCartoes
+                    cartoes={cartoes}
+                    onCartaoAtualizado={() => { carregarCartoes(); carregarTransacoes(); }}
+                  />
+                </div>
+              )}
+
+              {tabAtiva === 'recorrencias' && (
+                <div className="bg-card border border-border rounded-xl p-5 shadow-2xs">
+                  <ModuloRecorrencias
+                    recorrencias={recorrencias}
+                    categorias={categorias}
+                    onRecorrenciaAtualizada={carregarRecorrencias}
+                  />
+                </div>
+              )}
             </section>
           </>
         )}

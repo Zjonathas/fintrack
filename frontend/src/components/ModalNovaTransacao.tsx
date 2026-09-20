@@ -9,8 +9,11 @@ import {
   CheckCircle,
   WarningCircle,
   X,
+  ArrowCircleUp,
+  ArrowCircleDown,
+  CreditCard,
 } from '@phosphor-icons/react';
-import { Categoria, TransacaoCreatePayload } from '../types';
+import { CartaoCredito, Categoria, FormaPagamento, TipoTransacao, TransacaoCreatePayload } from '../types';
 import { apiService } from '../services/api';
 import { Checkbox } from './Checkbox';
 import { Select } from './Select';
@@ -21,6 +24,7 @@ interface ModalNovaTransacaoProps {
   isOpen: boolean;
   onClose: () => void;
   categorias: Categoria[];
+  cartoes: CartaoCredito[];
   onTransacaoCriada: () => void;
   onCategoriaCriada: (novaCategoria: Categoria) => void;
 }
@@ -34,15 +38,20 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
   isOpen,
   onClose,
   categorias,
+  cartoes,
   onTransacaoCriada,
   onCategoriaCriada,
 }) => {
+  const [tipo, setTipo] = useState<TipoTransacao>('despesa');
   const [descricao, setDescricao] = useState('');
   const [valorProduto, setValorProduto] = useState('');
   const [data, setData] = useState(hoje());
   const [categoriaId, setCategoriaId] = useState<number | ''>('');
   const [teveEntrega, setTeveEntrega] = useState(false);
   const [valorEntrega, setValorEntrega] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('dinheiro');
+  const [cartaoId, setCartaoId] = useState<number | ''>('');
+  const [totalParcelas, setTotalParcelas] = useState<number>(1);
 
   const [submetendo, setSubmetendo] = useState(false);
   const [feedback, setFeedback] = useState<{ tipo: 'ok' | 'erro'; msg: string } | null>(null);
@@ -75,12 +84,16 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
   };
 
   const resetForm = () => {
+    setTipo('despesa');
     setDescricao('');
     setValorProduto('');
     setTeveEntrega(false);
     setValorEntrega('');
     setData(hoje());
     setCategoriaId('');
+    setFormaPagamento('dinheiro');
+    setCartaoId('');
+    setTotalParcelas(1);
     setFeedback(null);
   };
 
@@ -95,25 +108,33 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
     setFeedback(null);
 
     if (!descricao.trim()) {
-      setFeedback({ tipo: 'erro', msg: 'Informe a descrição da despesa.' });
+      setFeedback({ tipo: 'erro', msg: 'Informe a descrição da transação.' });
       return;
     }
     if (numProduto <= 0) {
-      setFeedback({ tipo: 'erro', msg: 'O valor do produto deve ser positivo.' });
+      setFeedback({ tipo: 'erro', msg: 'O valor deve ser positivo.' });
       return;
     }
-    if (!categoriaId) {
+    if (tipo === 'despesa' && !categoriaId) {
       setFeedback({ tipo: 'erro', msg: 'Selecione uma categoria.' });
+      return;
+    }
+    if (tipo === 'despesa' && formaPagamento === 'credito' && !cartaoId) {
+      setFeedback({ tipo: 'erro', msg: 'Selecione um cartão de crédito.' });
       return;
     }
 
     const payload: TransacaoCreatePayload = {
       descricao: descricao.trim(),
       valor_produto: numProduto,
-      teve_entrega: teveEntrega,
-      valor_entrega: teveEntrega ? numEntrega : 0,
+      teve_entrega: tipo === 'despesa' ? teveEntrega : false,
+      valor_entrega: tipo === 'despesa' && teveEntrega ? numEntrega : 0,
       data: data || hoje(),
-      categoria_id: Number(categoriaId),
+      categoria_id: tipo === 'despesa' ? Number(categoriaId) : null,
+      tipo,
+      forma_pagamento: tipo === 'despesa' ? formaPagamento : 'dinheiro',
+      cartao_id: tipo === 'despesa' && formaPagamento === 'credito' ? Number(cartaoId) : null,
+      total_parcelas: tipo === 'despesa' && formaPagamento === 'credito' ? totalParcelas : 1,
     };
 
     try {
@@ -125,8 +146,18 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
         resetForm();
         onClose();
       }, 900);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao registrar transação.';
+    } catch (err: any) {
+      let msg = 'Erro ao registrar transação.';
+      if (err?.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => `${d.loc?.slice(-1)[0] || 'Campo'}: ${d.msg}`).join(' | ');
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setFeedback({ tipo: 'erro', msg });
     } finally {
       setSubmetendo(false);
@@ -136,6 +167,8 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
   const inputClass =
     'w-full px-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors';
 
+  const isReceita = tipo === 'receita';
+
   return (
     <div
       className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150"
@@ -144,25 +177,21 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
       }}
     >
       <div className="bg-card border border-border rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header do Modal Fixo */}
+        {/* Header */}
         <div className="shrink-0 p-4 sm:p-5 border-b border-border flex items-center justify-between bg-card">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-              <PlusCircle size={20} weight="duotone" />
+            <div className={`p-2 rounded-lg ${isReceita ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'}`}>
+              {isReceita ? <ArrowCircleUp size={20} weight="duotone" /> : <ArrowCircleDown size={20} weight="duotone" />}
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">Nova Transação</h2>
-              <p className="text-xs text-muted-foreground">
-                Cadastre suas despesas e mantenha seu orçamento atualizado
-              </p>
-
+              <p className="text-xs text-muted-foreground">Registre uma receita ou despesa</p>
             </div>
           </div>
           <button
             onClick={handleFechar}
             disabled={submetendo}
             className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 cursor-pointer"
-            title="Fechar (Esc)"
           >
             <X size={18} weight="bold" />
           </button>
@@ -171,11 +200,10 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
         {/* Feedback visual */}
         {feedback && (
           <div
-            className={`mx-5 mt-4 p-3 rounded-lg text-xs flex items-center gap-2 ${
-              feedback.tipo === 'ok'
+            className={`mx-5 mt-4 p-3 rounded-lg text-xs flex items-center gap-2 ${feedback.tipo === 'ok'
                 ? 'bg-primary/10 text-primary border border-primary/20'
                 : 'bg-destructive/10 text-destructive border border-destructive/20'
-            }`}
+              }`}
           >
             {feedback.tipo === 'ok' ? (
               <CheckCircle size={16} weight="fill" className="shrink-0" />
@@ -186,178 +214,267 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
           </div>
         )}
 
-        {/* Formulário com scroll interno e rodapé fixo */}
+        {/* Formulário */}
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden min-h-0">
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-            {/* Descrição */}
+
+            {/* Toggle Receita / Despesa */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-muted/50 rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={() => { setTipo('despesa'); setTeveEntrega(false); setValorEntrega(''); }}
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${tipo === 'despesa'
+                    ? 'bg-card text-primary shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                  }`}
+              >
+                <ArrowCircleDown size={14} weight="duotone" />
+                Despesa
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTipo('receita'); setTeveEntrega(false); setFormaPagamento('dinheiro'); }}
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-xs font-medium transition-all cursor-pointer ${tipo === 'receita'
+                    ? 'bg-card text-emerald-500 shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                  }`}
+              >
+                <ArrowCircleUp size={14} weight="duotone" />
+                Receita
+              </button>
+            </div>
             <div className="space-y-1.5">
               <label htmlFor="modal-nova-descricao" className="text-xs font-medium text-foreground">
                 Descrição <span className="text-destructive">*</span>
               </label>
-            <input
-              id="modal-nova-descricao"
-              type="text"
-              required
-              placeholder="Ex: Almoço, Compras Mercado, Remédios..."
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              className={inputClass}
-              maxLength={255}
-              autoFocus
-            />
-          </div>
-
-          {/* Grid: Valor e Data */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label htmlFor="modal-nova-valor" className="text-xs font-medium text-foreground flex items-center gap-1">
-                <CurrencyDollar size={14} className="text-primary" />
-                Valor do Produto (R$) <span className="text-destructive">*</span>
-              </label>
-              <NumberInput
-                id="modal-nova-valor"
-                step={1}
-                min={0}
+              <input
+                id="modal-nova-descricao"
+                type="text"
                 required
-                placeholder="0,00"
-                value={valorProduto}
-                onChange={(val) => setValorProduto(val)}
+                placeholder={tipo === 'receita' ? 'Ex: Salário, Venda, Freelance, Rendimentos...' : 'Ex: Almoço, Compras Mercado, Remédios...'}
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
                 className={inputClass}
+                maxLength={255}
+                autoFocus
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label htmlFor="modal-nova-data" className="text-xs font-medium text-foreground flex items-center gap-1">
-                <CalendarBlank size={14} className="text-primary" />
-                Data <span className="text-destructive">*</span>
-              </label>
-              <DatePicker
-                id="modal-nova-data"
-                required
-                value={data}
-                onChange={(val) => setData(val)}
-              />
-            </div>
-          </div>
-
-          {/* Categoria */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label htmlFor="modal-nova-categoria" className="flex items-center gap-1 text-xs font-medium text-foreground">
-                <Tag size={14} className="text-primary" />
-                <span>Categoria</span> <span className="text-destructive">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => setCriarCat(!criarCat)}
-                className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <Plus size={12} weight="bold" />
-                <span>{criarCat ? 'Cancelar' : 'Nova Categoria'}</span>
-              </button>
-            </div>
-
-            {criarCat && (
-              <div className="flex gap-2 p-2.5 rounded-lg bg-muted/40 border border-border animate-in fade-in duration-150">
-                <input
-                  type="text"
-                  placeholder="Nome da nova categoria..."
-                  value={novaCat}
-                  onChange={(e) => setNovaCat(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-                <button
-                  type="button"
-                  onClick={handleCriarCategoria}
-                  disabled={salvandoCat || !novaCat.trim()}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-accent border border-border transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {salvandoCat ? 'Criando...' : 'Salvar'}
-                </button>
-              </div>
-            )}
-
-            <Select
-              id="modal-nova-categoria"
-              value={categoriaId}
-              onChange={(val) => setCategoriaId(val ? Number(val) : '')}
-              placeholder="Selecione uma categoria..."
-              options={categorias.map((cat) => ({
-                value: cat.id,
-                label: cat.nome,
-              }))}
-            />
-          </div>
-
-          {/* Checkbox de Frete / Taxa de Entrega */}
-          <div className="pt-2 border-t border-border space-y-3">
-            <label
-              htmlFor="modal-nova-teve-entrega"
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                teveEntrega
-                  ? 'bg-warning/5 border-warning/30 shadow-xs'
-                  : 'border-border hover:bg-secondary/40'
-              }`}
-            >
-              <Checkbox
-                id="modal-nova-teve-entrega"
-                checked={teveEntrega}
-                onChange={(e) => {
-                  setTeveEntrega(e.target.checked);
-                  if (!e.target.checked) setValorEntrega('');
-                }}
-              />
-              <div className="flex-1 flex items-center gap-2">
-                <Truck size={16} weight="duotone" className={teveEntrega ? 'text-warning' : 'text-muted-foreground'} />
-                <span className="text-xs font-medium text-foreground">
-                  Houve taxa de entrega / frete?
-                </span>
-              </div>
-              {teveEntrega && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/25">
-                  Ativo
-                </span>
-              )}
-            </label>
-
-            {/* Campo condicional de Valor de Entrega */}
-            {teveEntrega && (
-              <div className="p-3 bg-muted/40 border border-border rounded-lg space-y-1.5 animate-in fade-in duration-150">
-                <label htmlFor="modal-nova-valor-entrega" className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <CurrencyDollar size={14} className="text-warning" />
-                  Valor da Entrega / Frete (R$)
+            {/* Grid: Valor e Data */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label htmlFor="modal-nova-valor" className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <CurrencyDollar size={14} className={tipo === 'receita' ? 'text-emerald-500' : 'text-primary'} />
+                  {tipo === 'receita' ? 'Valor da Receita (R$)' : 'Valor do Produto (R$)'} <span className="text-destructive">*</span>
                 </label>
                 <NumberInput
-                  id="modal-nova-valor-entrega"
+                  id="modal-nova-valor"
                   step={1}
                   min={0}
+                  required
                   placeholder="0,00"
-                  value={valorEntrega}
-                  onChange={(val) => setValorEntrega(val)}
+                  value={valorProduto}
+                  onChange={(val) => setValorProduto(val)}
                   className={inputClass}
-                  autoFocus
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  O frete será contabilizado e rastreado isoladamente nos gráficos e métricas.
-                </p>
               </div>
-            )}
-          </div>
 
-          {/* Resumo Dinâmico do Total */}
-          <div className="p-3 rounded-lg bg-secondary/50 border border-border flex items-center justify-between text-xs">
-            <div className="space-y-0.5">
-              <span className="text-muted-foreground">Total Calculado</span>
-              <div className="font-semibold text-foreground text-sm tabular-nums">
-                {formatBRL(total)}
+              <div className="space-y-1.5">
+                <label htmlFor="modal-nova-data" className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <CalendarBlank size={14} className="text-primary" />
+                  Data <span className="text-destructive">*</span>
+                </label>
+                <DatePicker
+                  id="modal-nova-data"
+                  required
+                  value={data}
+                  onChange={(val) => setData(val)}
+                />
               </div>
             </div>
-            {teveEntrega && numEntrega > 0 && (
-              <span className="text-[11px] text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20 tabular-nums">
-                Inclui frete de {formatBRL(numEntrega)}
-              </span>
+
+            {/* Categoria (apenas para Despesas) */}
+            {tipo === 'despesa' && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="modal-nova-categoria" className="flex items-center gap-1 text-xs font-medium text-foreground">
+                    <Tag size={14} className="text-primary" />
+                    <span>Categoria</span> <span className="text-destructive">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setCriarCat(!criarCat)}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={12} weight="bold" />
+                    <span>{criarCat ? 'Cancelar' : 'Nova Categoria'}</span>
+                  </button>
+                </div>
+
+                {criarCat && (
+                  <div className="flex gap-2 p-2.5 rounded-lg bg-muted/40 border border-border animate-in fade-in duration-150">
+                    <input
+                      type="text"
+                      placeholder="Nome da nova categoria..."
+                      value={novaCat}
+                      onChange={(e) => setNovaCat(e.target.value)}
+                      className="flex-1 px-3 py-1.5 text-xs bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCriarCategoria}
+                      disabled={salvandoCat || !novaCat.trim()}
+                      className="px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-accent border border-border transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {salvandoCat ? 'Criando...' : 'Salvar'}
+                    </button>
+                  </div>
+                )}
+
+                <Select
+                  id="modal-nova-categoria"
+                  value={categoriaId}
+                  onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+                  placeholder="Selecione uma categoria..."
+                  options={categorias.map((cat) => ({
+                    value: cat.id,
+                    label: cat.nome,
+                  }))}
+                />
+              </div>
             )}
-          </div>
+
+            {/* Forma de Pagamento (apenas para Despesas) */}
+            {tipo === 'despesa' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <CreditCard size={14} className="text-primary" />
+                  Forma de Pagamento
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['dinheiro', 'pix', 'debito', 'credito', 'boleto', 'outro'] as FormaPagamento[]).map((forma) => (
+                    <button
+                      key={forma}
+                      type="button"
+                      onClick={() => { setFormaPagamento(forma); if (forma !== 'credito') { setCartaoId(''); setTotalParcelas(1); } }}
+                      className={`py-1.5 px-2 rounded-md text-[11px] font-medium border transition-all capitalize cursor-pointer ${formaPagamento === forma
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        }`}
+                    >
+                      {forma === 'credito' ? 'Crédito' : forma === 'debito' ? 'Débito' : forma === 'dinheiro' ? 'Dinheiro' : forma === 'boleto' ? 'Boleto' : forma.charAt(0).toUpperCase() + forma.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Seletor de cartão + parcelas (aparece apenas se credito) */}
+                {formaPagamento === 'credito' && (
+                  <div className="p-3 bg-muted/40 border border-border rounded-lg space-y-3 animate-in fade-in duration-150">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-foreground">Cartão utilizado *</label>
+                      {cartoes.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">Nenhum cartão cadastrado. Adicione um na aba Cartões.</p>
+                      ) : (
+                        <Select
+                          id="modal-nova-cartao"
+                          value={cartaoId}
+                          onChange={(val) => setCartaoId(val ? Number(val) : '')}
+                          placeholder="Selecione o cartão..."
+                          options={cartoes.map((c) => ({ value: c.id, label: `${c.nome}${c.bandeira ? ' · ' + c.bandeira : ''}` }))}
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-foreground">Número de parcelas</label>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setTotalParcelas(n)}
+                            className={`w-9 h-8 rounded-md text-xs font-medium border transition-all cursor-pointer ${totalParcelas === n
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-border text-muted-foreground hover:border-primary/50'
+                              }`}
+                          >
+                            {n}x
+                          </button>
+                        ))}
+                      </div>
+                      {totalParcelas > 1 && numProduto > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {totalParcelas}x de {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numProduto / totalParcelas)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Checkbox de Frete (apenas para Despesas sem crédito) */}
+            {tipo === 'despesa' && formaPagamento !== 'credito' && (
+              <div className="pt-2 border-t border-border space-y-3">
+                <label
+                  htmlFor="modal-nova-teve-entrega"
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${teveEntrega
+                      ? 'bg-warning/5 border-warning/30 shadow-xs'
+                      : 'border-border hover:bg-secondary/40'
+                    }`}
+                >
+                  <Checkbox
+                    id="modal-nova-teve-entrega"
+                    checked={teveEntrega}
+                    onChange={(e) => {
+                      setTeveEntrega(e.target.checked);
+                      if (!e.target.checked) setValorEntrega('');
+                    }}
+                  />
+                  <div className="flex-1 flex items-center gap-2">
+                    <Truck size={16} weight="duotone" className={teveEntrega ? 'text-warning' : 'text-muted-foreground'} />
+                    <span className="text-xs font-medium text-foreground">Houve taxa de entrega / frete?</span>
+                  </div>
+                  {teveEntrega && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/25">Ativo</span>
+                  )}
+                </label>
+
+                {teveEntrega && (
+                  <div className="p-3 bg-muted/40 border border-border rounded-lg space-y-1.5 animate-in fade-in duration-150">
+                    <label htmlFor="modal-nova-valor-entrega" className="text-xs font-medium text-foreground flex items-center gap-1">
+                      <CurrencyDollar size={14} className="text-warning" />
+                      Valor da Entrega / Frete (R$)
+                    </label>
+                    <NumberInput
+                      id="modal-nova-valor-entrega"
+                      step={1}
+                      min={0}
+                      placeholder="0,00"
+                      value={valorEntrega}
+                      onChange={(val) => setValorEntrega(val)}
+                      className={inputClass}
+                      autoFocus
+                    />
+                    <p className="text-[11px] text-muted-foreground">O frete será contabilizado isoladamente nas métricas.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resumo Dinâmico do Total */}
+            <div className="p-3 rounded-lg bg-secondary/50 border border-border flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="text-muted-foreground">Total Calculado</span>
+                <div className="font-semibold text-foreground text-sm tabular-nums">
+                  {formatBRL(total)}
+                </div>
+              </div>
+              {teveEntrega && numEntrega > 0 && (
+                <span className="text-[11px] text-warning bg-warning/10 px-2 py-0.5 rounded border border-warning/20 tabular-nums">
+                  Inclui frete de {formatBRL(numEntrega)}
+                </span>
+              )}
+            </div>
 
           </div>
 

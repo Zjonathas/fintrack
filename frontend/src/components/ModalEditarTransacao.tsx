@@ -50,7 +50,7 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
       setDescricao(transacao.descricao);
       setValorProduto(String(transacao.valor_produto));
       setData(transacao.data);
-      setCategoriaId(transacao.categoria_id);
+      setCategoriaId(transacao.categoria_id ?? '');
       setTeveEntrega(transacao.teve_entrega);
       setValorEntrega(transacao.teve_entrega ? String(transacao.valor_entrega) : '');
       setFeedback(null);
@@ -74,11 +74,11 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
     }
 
     if (numProduto <= 0) {
-      setFeedback({ tipo: 'erro', msg: 'O valor do produto deve ser positivo.' });
+      setFeedback({ tipo: 'erro', msg: 'O valor deve ser positivo.' });
       return;
     }
 
-    if (!categoriaId) {
+    if (transacao.tipo === 'despesa' && !categoriaId) {
       setFeedback({ tipo: 'erro', msg: 'Selecione uma categoria.' });
       return;
     }
@@ -86,10 +86,13 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
     const payload: TransacaoUpdatePayload = {
       descricao: descFormatada,
       valor_produto: numProduto,
-      teve_entrega: teveEntrega,
-      valor_entrega: teveEntrega ? numEntrega : 0,
+      teve_entrega: transacao.tipo === 'despesa' ? teveEntrega : false,
+      valor_entrega: transacao.tipo === 'despesa' && teveEntrega ? numEntrega : 0,
       data: data || transacao.data,
-      categoria_id: Number(categoriaId),
+      categoria_id: transacao.tipo === 'despesa' ? Number(categoriaId) : null,
+      tipo: transacao.tipo,
+      forma_pagamento: transacao.forma_pagamento,
+      cartao_id: transacao.cartao_id ?? null,
     };
 
     try {
@@ -101,8 +104,18 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
         setFeedback(null);
         onClose();
       }, 900);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao atualizar a transação.';
+    } catch (err: any) {
+      let msg = 'Erro ao atualizar a transação.';
+      if (err?.response?.data?.detail) {
+        const detail = err.response.data.detail;
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          msg = detail.map((d: any) => `${d.loc?.slice(-1)[0] || 'Campo'}: ${d.msg}`).join(' | ');
+        }
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
       setFeedback({ tipo: 'erro', msg });
     } finally {
       setSalvando(false);
@@ -173,7 +186,7 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
               type="text"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Ex: Pizza artesanal, Farmácia, Mercado"
+              placeholder={transacao.tipo === 'receita' ? 'Ex: Salário, Venda, Freelance, Rendimentos...' : 'Ex: Pizza artesanal, Farmácia, Mercado'}
               className={inputClass}
               maxLength={255}
               required
@@ -183,9 +196,9 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
           {/* Grid: Valor e Categoria */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                <CurrencyDollar size={14} className="text-primary" />
-                Valor do Produto (R$) <span className="text-destructive">*</span>
+              <label htmlFor="modal-editar-valor" className="text-xs font-medium text-foreground flex items-center gap-1">
+                <CurrencyDollar size={14} className={transacao.tipo === 'receita' ? 'text-emerald-500' : 'text-primary'} />
+                {transacao.tipo === 'receita' ? 'Valor da Receita (R$)' : 'Valor do Produto (R$)'} <span className="text-destructive">*</span>
               </label>
               <NumberInput
                 id="modal-editar-valor"
@@ -199,29 +212,31 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                <Tag size={14} className="text-primary" />
-                Categoria <span className="text-destructive">*</span>
-              </label>
-              <Select
-                id="modal-editar-categoria"
-                value={categoriaId}
-                onChange={(val) => setCategoriaId(val ? Number(val) : '')}
-                placeholder="Selecione uma categoria..."
-                options={categorias.map((c) => ({
-                  value: c.id,
-                  label: c.nome,
-                }))}
-              />
-            </div>
+            {transacao.tipo === 'despesa' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                  <Tag size={14} className="text-primary" />
+                  Categoria <span className="text-destructive">*</span>
+                </label>
+                <Select
+                  id="modal-editar-categoria"
+                  value={categoriaId}
+                  onChange={(val) => setCategoriaId(val ? Number(val) : '')}
+                  placeholder="Selecione uma categoria..."
+                  options={categorias.map((c) => ({
+                    value: c.id,
+                    label: c.nome,
+                  }))}
+                />
+              </div>
+            )}
           </div>
 
           {/* Grid: Data */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-foreground flex items-center gap-1">
               <CalendarBlank size={14} className="text-primary" />
-              Data da Despesa <span className="text-destructive">*</span>
+              Data <span className="text-destructive">*</span>
             </label>
             <DatePicker
               id="modal-editar-data"
@@ -231,60 +246,62 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
             />
           </div>
 
-          {/* Seção Isolada de Frete / Taxa de Entrega (Regra de Negócio Central) */}
-          <div className="pt-2 border-t border-border space-y-3">
-            <label
-              htmlFor="editar-teve-entrega"
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                teveEntrega
-                  ? 'bg-warning/5 border-warning/30 shadow-xs'
-                  : 'border-border hover:bg-secondary/40'
-              }`}
-            >
-              <Checkbox
-                id="editar-teve-entrega"
-                checked={teveEntrega}
-                onChange={(e) => {
-                  setTeveEntrega(e.target.checked);
-                  if (!e.target.checked) setValorEntrega('');
-                }}
-              />
-              <div className="flex-1 flex items-center gap-2">
-                <Truck size={16} weight="duotone" className={teveEntrega ? 'text-warning' : 'text-muted-foreground'} />
-                <span className="text-xs font-medium text-foreground">
-                  Esta transação teve taxa de frete / entrega?
-                </span>
-              </div>
-              {teveEntrega && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/25">
-                  Ativo
-                </span>
-              )}
-            </label>
-
-            {/* Campo Condicional de Frete */}
-            {teveEntrega && (
-              <div className="p-3 bg-muted/40 border border-border rounded-lg space-y-1.5 animate-in fade-in duration-150">
-                <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                  <CurrencyDollar size={14} className="text-warning" />
-                  Valor da Taxa de Entrega (R$)
-                </label>
-                <NumberInput
-                  id="modal-editar-valor-entrega"
-                  step={1}
-                  min={0}
-                  placeholder="0,00"
-                  value={valorEntrega}
-                  onChange={(val) => setValorEntrega(val)}
-                  className={inputClass}
-                  autoFocus
+          {/* Seção Isolada de Frete / Taxa de Entrega (apenas para Despesas) */}
+          {transacao.tipo === 'despesa' && (
+            <div className="pt-2 border-t border-border space-y-3">
+              <label
+                htmlFor="editar-teve-entrega"
+                className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                  teveEntrega
+                    ? 'bg-warning/5 border-warning/30 shadow-xs'
+                    : 'border-border hover:bg-secondary/40'
+                }`}
+              >
+                <Checkbox
+                  id="editar-teve-entrega"
+                  checked={teveEntrega}
+                  onChange={(e) => {
+                    setTeveEntrega(e.target.checked);
+                    if (!e.target.checked) setValorEntrega('');
+                  }}
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Este valor será isolado nas métricas analíticas e gráficos do dashboard.
-                </p>
-              </div>
-            )}
-          </div>
+                <div className="flex-1 flex items-center gap-2">
+                  <Truck size={16} weight="duotone" className={teveEntrega ? 'text-warning' : 'text-muted-foreground'} />
+                  <span className="text-xs font-medium text-foreground">
+                    Esta transação teve taxa de frete / entrega?
+                  </span>
+                </div>
+                {teveEntrega && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/25">
+                    Ativo
+                  </span>
+                )}
+              </label>
+
+              {/* Campo Condicional de Frete */}
+              {teveEntrega && (
+                <div className="p-3 bg-muted/40 border border-border rounded-lg space-y-1.5 animate-in fade-in duration-150">
+                  <label className="text-xs font-medium text-foreground flex items-center gap-1">
+                    <CurrencyDollar size={14} className="text-warning" />
+                    Valor da Taxa de Entrega (R$)
+                  </label>
+                  <NumberInput
+                    id="modal-editar-valor-entrega"
+                    step={1}
+                    min={0}
+                    placeholder="0,00"
+                    value={valorEntrega}
+                    onChange={(val) => setValorEntrega(val)}
+                    className={inputClass}
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    O frete será contabilizado isoladamente nas métricas.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Resumo Dinâmico do Total */}
           <div className="p-3 rounded-lg bg-secondary/50 border border-border flex items-center justify-between text-xs">
