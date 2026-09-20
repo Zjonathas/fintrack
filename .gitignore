@@ -41,6 +41,7 @@ share/python-wheels/
 # Testes & Cobertura
 # ==========================================
 .pytest_cache/
+*/.pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
@@ -76,6 +77,10 @@ frontend/dist/
 */dist/
 dist-ssr/
 .eslintcache
+.vite/
+frontend/.vite/
+*/.vite/
+*.tsbuildinfo
 
 # ==========================================
 # Logs
