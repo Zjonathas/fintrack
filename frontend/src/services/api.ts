@@ -129,8 +129,11 @@ export const apiService = {
     return response.data;
   },
 
-  async getResumoDashboard(): Promise<ResumoAnalitico> {
-    const response = await api.get<ResumoAnalitico>('/dashboard/resumo');
+  async getResumoDashboard(dataInicio?: string, dataFim?: string): Promise<ResumoAnalitico> {
+    const params: Record<string, string> = {};
+    if (dataInicio) params.data_inicio = dataInicio;
+    if (dataFim) params.data_fim = dataFim;
+    const response = await api.get<ResumoAnalitico>('/dashboard/resumo', { params });
     return response.data;
   },
 

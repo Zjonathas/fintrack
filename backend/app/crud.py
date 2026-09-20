@@ -622,8 +622,19 @@ def toggle_recorrencia(db: Session, recorrencia_id: int, usuario_id: int) -> Opt
 # Resumo Analitico e Dashboard (Isolado)
 # ==========================================
 
-def get_resumo_analitico(db: Session, usuario_id: int) -> schemas.ResumoAnalitico:
-    transacoes = db.query(models.Transacao).filter(models.Transacao.usuario_id == usuario_id).all()
+def get_resumo_analitico(
+    db: Session,
+    usuario_id: int,
+    data_inicio: Optional[date] = None,
+    data_fim: Optional[date] = None
+) -> schemas.ResumoAnalitico:
+    query = db.query(models.Transacao).filter(models.Transacao.usuario_id == usuario_id)
+    if data_inicio is not None:
+        query = query.filter(models.Transacao.data >= data_inicio)
+    if data_fim is not None:
+        query = query.filter(models.Transacao.data <= data_fim)
+
+    transacoes = query.all()
 
     total_produtos = 0.0
     total_entregas = 0.0

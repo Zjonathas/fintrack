@@ -78,11 +78,25 @@ function AppContent() {
     }
   }, []);
 
-  const carregarResumo = useCallback(async () => {
+  // Período ativo do dashboard (padrão: mês atual)
+  const [periodoDashboard, setPeriodoDashboard] = useState<{ inicio?: string; fim?: string }>(() => {
+    const agora = new Date();
+    const y = agora.getFullYear();
+    const m = agora.getMonth();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const inicio = `${y}-${pad(m + 1)}-01`;
+    const fimDate = new Date(y, m + 1, 0);
+    const fim = `${y}-${pad(m + 1)}-${pad(fimDate.getDate())}`;
+    return { inicio, fim };
+  });
+
+  const carregarResumo = useCallback(async (dataInicio?: string, dataFim?: string) => {
     if (!isAuthenticated) return;
     try {
       setLoadingDashboard(true);
-      const dados = await apiService.getResumoDashboard();
+      const ini = dataInicio !== undefined ? dataInicio : periodoDashboard.inicio;
+      const fim = dataFim !== undefined ? dataFim : periodoDashboard.fim;
+      const dados = await apiService.getResumoDashboard(ini, fim);
       setResumo(dados);
       setApiOnline(true);
     } catch {
@@ -90,7 +104,12 @@ function AppContent() {
     } finally {
       setLoadingDashboard(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, periodoDashboard]);
+
+  const handlePeriodoDashboardChange = (inicio?: string, fim?: string) => {
+    setPeriodoDashboard({ inicio, fim });
+    carregarResumo(inicio, fim);
+  };
 
   const carregarTransacoes = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -426,7 +445,8 @@ function AppContent() {
                   resumo={resumo}
                   transacoes={transacoes}
                   loading={loadingDashboard}
-                  onRefresh={carregarResumo}
+                  onRefresh={() => carregarResumo(periodoDashboard.inicio, periodoDashboard.fim)}
+                  onPeriodoChange={handlePeriodoDashboardChange}
                   onAbrirModalCategoria={() => setModalCategoriaAberto(true)}
                 />
               </ErrorBoundary>
