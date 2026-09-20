@@ -412,8 +412,8 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
               </div>
             )}
 
-            {/* Checkbox de Frete (apenas para Despesas sem crédito) */}
-            {tipo === 'despesa' && formaPagamento !== 'credito' && (
+            {/* Checkbox de Frete (para qualquer tipo de Despesa) */}
+            {tipo === 'despesa' && (
               <div className="pt-2 border-t border-border space-y-3">
                 <label
                   htmlFor="modal-nova-teve-entrega"

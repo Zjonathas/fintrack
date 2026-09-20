@@ -349,10 +349,17 @@ def remover_transacoes_em_lote(
     summary="Obter métricas consolidadas e gastos por categoria do usuário"
 )
 def obter_resumo_dashboard(
+    data_inicio: Optional[date] = Query(None, description="Data inicial do período (YYYY-MM-DD)"),
+    data_fim: Optional[date] = Query(None, description="Data final do período (YYYY-MM-DD)"),
     current_user: models.Usuario = Depends(auth.get_current_user),
     db: Session = Depends(get_db)
 ):
-    return crud.get_resumo_analitico(db=db, usuario_id=current_user.id)
+    return crud.get_resumo_analitico(
+        db=db,
+        usuario_id=current_user.id,
+        data_inicio=data_inicio,
+        data_fim=data_fim
+    )
 
 
 @app.get(

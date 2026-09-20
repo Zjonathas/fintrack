@@ -8,6 +8,7 @@ import {
   Coins,
   ArrowCircleUp,
   ArrowCircleDown,
+  CalendarBlank,
 } from '@phosphor-icons/react';
 import {
   ResponsiveContainer,
@@ -25,14 +26,64 @@ import {
   Area,
 } from 'recharts';
 import { ResumoAnalitico, Transacao } from '../types';
+import { DatePicker } from './DatePicker';
+
+export type TipoPeriodo =
+  | 'mes_atual'
+  | 'mes_anterior'
+  | 'ultimos_30_dias'
+  | 'ano_atual'
+  | 'tudo'
+  | 'customizado';
 
 interface DashboardResumoProps {
   resumo: ResumoAnalitico | null;
   transacoes?: Transacao[];
   loading: boolean;
   onRefresh: () => void;
+  onPeriodoChange?: (dataInicio?: string, dataFim?: string) => void;
   onAbrirModalCategoria?: () => void;
 }
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+export const getIntervaloPeriodo = (
+  tipo: TipoPeriodo,
+  customIni?: string,
+  customFim?: string
+): { inicio?: string; fim?: string; rotulo: string } => {
+  const agora = new Date();
+  const y = agora.getFullYear();
+  const m = agora.getMonth();
+
+  switch (tipo) {
+    case 'mes_atual': {
+      const ini = new Date(y, m, 1);
+      const fim = new Date(y, m + 1, 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: 'Este Mês' };
+    }
+    case 'mes_anterior': {
+      const ini = new Date(y, m - 1, 1);
+      const fim = new Date(y, m, 0);
+      return { inicio: toISO(ini), fim: toISO(fim), rotulo: 'Mês Anterior' };
+    }
+    case 'ultimos_30_dias': {
+      const ini = new Date(agora);
+      ini.setDate(agora.getDate() - 30);
+      return { inicio: toISO(ini), fim: toISO(agora), rotulo: 'Últimos 30 Dias' };
+    }
+    case 'ano_atual': {
+      return { inicio: `${y}-01-01`, fim: `${y}-12-31`, rotulo: `Ano de ${y}` };
+    }
+    case 'tudo': {
+      return { inicio: undefined, fim: undefined, rotulo: 'Todo o Histórico' };
+    }
+    case 'customizado': {
+      return { inicio: customIni, fim: customFim, rotulo: 'Personalizado' };
+    }
+  }
+};
 
 const formatBRL = (val: number): string =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
@@ -85,18 +136,55 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
   transacoes = [],
   loading,
   onRefresh,
+  onPeriodoChange,
   onAbrirModalCategoria,
 }) => {
   const [activeTab, setActiveTab] = useState<'geral' | 'categorias' | 'evolucao'>('geral');
+  const [tipoPeriodo, setTipoPeriodo] = useState<TipoPeriodo>('mes_atual');
+  const [customInicio, setCustomInicio] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return toISO(d);
+  });
+  const [customFim, setCustomFim] = useState<string>(() => toISO(new Date()));
+  const [periodoAtivo, setPeriodoAtivo] = useState<{ inicio?: string; fim?: string; rotulo: string }>(() =>
+    getIntervaloPeriodo('mes_atual')
+  );
+
+  const handleSelecionarPeriodo = (novoTipo: TipoPeriodo) => {
+    setTipoPeriodo(novoTipo);
+    if (novoTipo === 'customizado') {
+      const range = getIntervaloPeriodo('customizado', customInicio, customFim);
+      setPeriodoAtivo(range);
+      onPeriodoChange?.(range.inicio, range.fim);
+    } else {
+      const range = getIntervaloPeriodo(novoTipo);
+      setPeriodoAtivo(range);
+      onPeriodoChange?.(range.inicio, range.fim);
+    }
+  };
+
+  const handleAplicarCustomizado = () => {
+    const range = getIntervaloPeriodo('customizado', customInicio, customFim);
+    setPeriodoAtivo(range);
+    onPeriodoChange?.(range.inicio, range.fim);
+  };
 
   // Dados para o gráfico de evolução temporal diária
   const dadosEvolucao = useMemo(() => {
     if (!transacoes.length) return [];
-    
+
+    const transacoesFiltradas = transacoes.filter((t) => {
+      if (periodoAtivo.inicio && t.data < periodoAtivo.inicio) return false;
+      if (periodoAtivo.fim && t.data > periodoAtivo.fim) return false;
+      return true;
+    });
+
     const mapaDias = new Map<string, { data: string; produtos: number; frete: number; total: number }>();
-    const ordenadas = [...transacoes].sort((a, b) => a.data.localeCompare(b.data));
+    const ordenadas = [...transacoesFiltradas].sort((a, b) => a.data.localeCompare(b.data));
 
     ordenadas.forEach((t) => {
+      if (t.tipo === 'receita') return;
       const diaFormatado = t.data.split('-').reverse().slice(0, 2).join('/'); // DD/MM
       const atual = mapaDias.get(diaFormatado) || { data: diaFormatado, produtos: 0, frete: 0, total: 0 };
       atual.produtos += Number(t.valor_produto) || 0;
@@ -106,7 +194,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
     });
 
     return Array.from(mapaDias.values());
-  }, [transacoes]);
+  }, [transacoes, periodoAtivo]);
 
   // Dados para o gráfico Donut de Categorias (garante valores numéricos válidos)
   const dadosPizza = useMemo(() => {
@@ -255,6 +343,92 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
             <span>{loading ? 'Atualizando' : 'Atualizar'}</span>
           </button>
         </div>
+      </div>
+
+      {/* Seletor de Período dos Gráficos e KPIs */}
+      <div className="bg-card border border-border rounded-xl p-3 sm:p-4 shadow-2xs space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <CalendarBlank size={16} weight="duotone" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-foreground">Período de Análise:</span>
+                <span className="text-xs font-semibold text-primary">
+                  {getIntervaloPeriodo(tipoPeriodo, customInicio, customFim).rotulo}
+                </span>
+              </div>
+              {periodoAtivo.inicio && periodoAtivo.fim ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {periodoAtivo.inicio.split('-').reverse().join('/')} até {periodoAtivo.fim.split('-').reverse().join('/')}
+                </p>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">Todo o histórico de registros</p>
+              )}
+            </div>
+          </div>
+
+          {/* Atalhos Rápidos (Pills) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 text-xs">
+            {(
+              [
+                { id: 'mes_atual', label: 'Este Mês' },
+                { id: 'mes_anterior', label: 'Mês Anterior' },
+                { id: 'ultimos_30_dias', label: '30 Dias' },
+                { id: 'ano_atual', label: 'Este Ano' },
+                { id: 'tudo', label: 'Tudo' },
+                { id: 'customizado', label: 'Personalizado' },
+              ] as const
+            ).map((opcao) => (
+              <button
+                key={opcao.id}
+                type="button"
+                onClick={() => handleSelecionarPeriodo(opcao.id)}
+                className={`px-2.5 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
+                  tipoPeriodo === opcao.id
+                    ? 'bg-primary text-primary-foreground shadow-xs font-semibold'
+                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground hover:text-foreground border border-border/50'
+                }`}
+              >
+                {opcao.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Linha adicional se 'customizado' estiver selecionado */}
+        {tipoPeriodo === 'customizado' && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3 border-t border-border/60 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">De:</span>
+              <div className="w-36">
+                <DatePicker
+                  value={customInicio}
+                  onChange={(val) => setCustomInicio(val)}
+                  className="w-full text-xs"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Até:</span>
+              <div className="w-36">
+                <DatePicker
+                  value={customFim}
+                  onChange={(val) => setCustomFim(val)}
+                  className="w-full text-xs"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAplicarCustomizado}
+              className="px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold border border-primary/20 transition-colors cursor-pointer self-start sm:self-auto"
+            >
+              Filtrar Gráficos
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KPI Cards Estruturados */}

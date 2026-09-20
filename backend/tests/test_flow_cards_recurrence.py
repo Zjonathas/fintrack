@@ -315,3 +315,47 @@ def test_receita_apenas_valor_descricao_e_data(client: TestClient):
     assert rec["categoria_id"] is None
 
 
+def test_dashboard_resumo_filtro_periodo(client: TestClient):
+    headers = get_authenticated_header(client, "periodo_test@example.com")
+
+    # Transação 1: Março de 2026 (Receita R$ 3000)
+    client.post(
+        "/api/transacoes",
+        headers=headers,
+        json={
+            "tipo": "receita",
+            "descricao": "Salário Março",
+            "valor_produto": 3000.0,
+            "data": "2026-03-10"
+        }
+    )
+
+    # Transação 2: Abril de 2026 (Receita R$ 4000)
+    client.post(
+        "/api/transacoes",
+        headers=headers,
+        json={
+            "tipo": "receita",
+            "descricao": "Salário Abril",
+            "valor_produto": 4000.0,
+            "data": "2026-04-10"
+        }
+    )
+
+    # 1. Sem filtro: deve somar R$ 7000
+    resp_total = client.get("/api/dashboard/resumo", headers=headers)
+    assert resp_total.status_code == 200
+    assert resp_total.json()["total_receitas"] == 7000.0
+
+    # 2. Filtrando apenas Março: deve trazer apenas R$ 3000
+    resp_marco = client.get("/api/dashboard/resumo?data_inicio=2026-03-01&data_fim=2026-03-31", headers=headers)
+    assert resp_marco.status_code == 200
+    assert resp_marco.json()["total_receitas"] == 3000.0
+
+    # 3. Filtrando apenas Abril: deve trazer apenas R$ 4000
+    resp_abril = client.get("/api/dashboard/resumo?data_inicio=2026-04-01&data_fim=2026-04-30", headers=headers)
+    assert resp_abril.status_code == 200
+    assert resp_abril.json()["total_receitas"] == 4000.0
+
+
+
