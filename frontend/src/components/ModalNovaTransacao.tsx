@@ -251,7 +251,7 @@ export const ModalNovaTransacao: React.FC<ModalNovaTransacaoProps> = ({
                 id="modal-nova-descricao"
                 type="text"
                 required
-                placeholder="Ex: Almoço, Compras Mercado, Remédios..."
+                placeholder={tipo === 'receita' ? 'Ex: Salário, Venda, Freelance, Rendimentos...' : 'Ex: Almoço, Compras Mercado, Remédios...'}
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 className={inputClass}

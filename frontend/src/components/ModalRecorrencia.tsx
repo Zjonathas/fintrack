@@ -202,7 +202,7 @@ export const ModalRecorrencia: React.FC<ModalRecorrenciaProps> = ({
               type="text"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder={isReceita ? 'Ex: Salário, Aluguel Recebido...' : 'Ex: Netflix, Academia, Aluguel...'}
+              placeholder={isReceita ? 'Ex: Salário, Venda, Aluguel Recebido...' : 'Ex: Netflix, Academia, Aluguel...'}
               className={inputClass}
               maxLength={255}
               autoFocus

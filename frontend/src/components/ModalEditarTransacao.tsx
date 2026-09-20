@@ -186,7 +186,7 @@ export const ModalEditarTransacao: React.FC<ModalEditarTransacaoProps> = ({
               type="text"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Ex: Pizza artesanal, Farmácia, Mercado"
+              placeholder={transacao.tipo === 'receita' ? 'Ex: Salário, Venda, Freelance, Rendimentos...' : 'Ex: Pizza artesanal, Farmácia, Mercado'}
               className={inputClass}
               maxLength={255}
               required
