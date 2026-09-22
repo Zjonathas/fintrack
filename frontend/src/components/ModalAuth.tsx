@@ -153,14 +153,14 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
         if (e.target === e.currentTarget && !submetendo) onClose();
       }}
     >
-      <div className="bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[88vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+      <div className="bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[90dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
         {/* Indicador visual de arrasto no topo para mobile */}
         <div className="sm:hidden w-full pt-2.5 pb-1 flex justify-center bg-card shrink-0">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 
         {/* Header do Modal com Abas */}
-        <div className="p-4 sm:p-5 border-b border-border bg-card">
+        <div className="p-4 sm:p-5 border-b border-border bg-card shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
@@ -215,114 +215,55 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
           </div>
         </div>
 
-        {/* Mensagem de Erro */}
-        {erro && (
-          <div className="mx-5 mt-4 p-3 rounded-lg text-xs bg-destructive/10 text-destructive border border-destructive/20 flex items-center gap-2 animate-in fade-in duration-150">
-            <WarningCircle size={16} weight="fill" className="shrink-0" />
-            <span>{erro}</span>
-          </div>
-        )}
+        {/* Formulário com corpo rolável e rodapé fixo */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 overscroll-contain">
+            {/* Mensagem de Erro */}
+            {erro && (
+              <div className="p-3 rounded-lg text-xs bg-destructive/10 text-destructive border border-destructive/20 flex items-center gap-2 animate-in fade-in duration-150">
+                <WarningCircle size={16} weight="fill" className="shrink-0" />
+                <span>{erro}</span>
+              </div>
+            )}
 
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5">
-          {tab === 'register' && (
+            {tab === 'register' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Nome Completo</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                    <User size={16} weight="duotone" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Ana Clara"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground">Nome Completo</label>
+              <label className="text-xs font-medium text-foreground">E-mail</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                  <User size={16} weight="duotone" />
+                  <EnvelopeSimple size={16} weight="duotone" />
                 </div>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  placeholder="Ex: Ana Clara"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                 />
               </div>
             </div>
-          )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-foreground">E-mail</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                <EnvelopeSimple size={16} weight="duotone" />
-              </div>
-              <input
-                type="email"
-                required
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-foreground">Senha</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
-                <LockKey size={16} weight="duotone" />
-              </div>
-              <input
-                type={mostrarSenha ? 'text' : 'password'}
-                required
-                placeholder={tab === 'register' ? 'Mínimo de 8 caracteres fortes' : 'Sua senha'}
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                className="w-full pl-9 pr-10 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-              />
-              <button
-                type="button"
-                onClick={() => setMostrarSenha((v) => !v)}
-                tabIndex={-1}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                {mostrarSenha ? <EyeSlash size={16} weight="bold" /> : <Eye size={16} weight="bold" />}
-              </button>
-            </div>
-
-            {/* Checklist em tempo real dos requisitos de senha */}
-            {tab === 'register' && senha.length > 0 && (
-              <div className="mt-2 p-2.5 rounded-lg bg-secondary/40 border border-border/70 text-[11px] space-y-1 animate-in fade-in duration-150">
-                <span className="font-semibold text-foreground block mb-1">Requisitos de segurança:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1">
-                  <div className={`flex items-center gap-1.5 transition-colors ${senha.length >= 8 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${senha.length >= 8 ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                    <span>Mínimo 8 caracteres</span>
-                  </div>
-                  <div className={`flex items-center gap-1.5 transition-colors ${/[A-Z]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                    <span>Letra maiúscula (A-Z)</span>
-                  </div>
-                  <div className={`flex items-center gap-1.5 transition-colors ${/[a-z]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                    <span>Letra minúscula (a-z)</span>
-                  </div>
-                  <div className={`flex items-center gap-1.5 transition-colors ${/\d/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${/\d/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                    <span>Número (0-9)</span>
-                  </div>
-                  <div className={`flex items-center gap-1.5 transition-colors ${/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
-                    <span>Especial (! @ # $ %...)</span>
-                  </div>
-                  <div className={`flex items-center gap-1.5 transition-colors ${!/\s/.test(senha) ? 'text-primary font-medium' : 'text-destructive font-medium'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${!/\s/.test(senha) ? 'bg-primary' : 'bg-destructive'}`} />
-                    <span>Sem espaços</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-
-          {tab === 'register' && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground">Confirmar Senha</label>
+              <label className="text-xs font-medium text-foreground">Senha</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
                   <LockKey size={16} weight="duotone" />
@@ -330,21 +271,81 @@ export const ModalAuth: React.FC<ModalAuthProps> = ({
                 <input
                   type={mostrarSenha ? 'text' : 'password'}
                   required
-                  placeholder="Repita sua senha"
-                  value={confirmarSenha}
-                  onChange={(e) => setConfirmarSenha(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  placeholder={tab === 'register' ? 'Mínimo de 8 caracteres fortes' : 'Sua senha'}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  className="w-full pl-9 pr-10 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  {mostrarSenha ? <EyeSlash size={16} weight="bold" /> : <Eye size={16} weight="bold" />}
+                </button>
               </div>
-            </div>
-          )}
 
-          {/* Botão de Envio Touch-Friendly e Safe Area */}
-          <div className="pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {/* Checklist em tempo real dos requisitos de senha */}
+              {tab === 'register' && senha.length > 0 && (
+                <div className="mt-2 p-2.5 rounded-lg bg-secondary/40 border border-border/70 text-[11px] space-y-1 animate-in fade-in duration-150">
+                  <span className="font-semibold text-foreground block mb-1">Requisitos de segurança:</span>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                    <div className={`flex items-center gap-1.5 transition-colors ${senha.length >= 8 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${senha.length >= 8 ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                      <span className="truncate">Mínimo 8 caracteres</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 transition-colors ${/[A-Z]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                      <span className="truncate">Maiúscula (A-Z)</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 transition-colors ${/[a-z]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${/[a-z]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                      <span className="truncate">Minúscula (a-z)</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 transition-colors ${/\d/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${/\d/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                      <span className="truncate">Número (0-9)</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 transition-colors ${/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha) ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${/[!@#$%^&*()_\-+=\[\]{};:,\.<>?~|/]/.test(senha) ? 'bg-primary' : 'bg-muted-foreground/50'}`} />
+                      <span className="truncate">Especial (!@#...)</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 transition-colors ${!/\s/.test(senha) ? 'text-primary font-medium' : 'text-destructive font-medium'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${!/\s/.test(senha) ? 'bg-primary' : 'bg-destructive'}`} />
+                      <span className="truncate">Sem espaços</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {tab === 'register' && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground">Confirmar Senha</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-foreground">
+                    <LockKey size={16} weight="duotone" />
+                  </div>
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    required
+                    placeholder="Repita sua senha"
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Rodapé Fixo com Botão de Envio Touch-Friendly e Safe Area */}
+          <div className="shrink-0 p-4 sm:px-5 sm:py-4 border-t border-border bg-card/95 backdrop-blur-xs pb-[max(1rem,env(safe-area-inset-bottom))]">
             <button
               type="submit"
               disabled={submetendo}
-              className="w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold shadow-xs transition-all disabled:opacity-50 cursor-pointer active:scale-[0.99]"
             >
               {submetendo ? (
                 <span>Processando...</span>
