@@ -405,7 +405,7 @@ function AppContent() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-24 sm:pb-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 pb-6 sm:pb-8">
         {authLoading ? (
           /* Estado de Carregamento da Sessão */
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
@@ -592,14 +592,20 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border py-4 mt-8 bg-card/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left text-xs text-muted-foreground">
+      <footer
+        className={`border-t border-border py-5 mt-8 bg-card/40 transition-all ${
+          isAuthenticated
+            ? 'pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-5'
+            : 'pb-[max(1.25rem,env(safe-area-inset-bottom))]'
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left text-xs text-muted-foreground">
           <span>FinançasApp — Controle de gastos pessoais inteligente para você economizar mais</span>
           {!isStandalone && (
             <button
               type="button"
               onClick={() => setModalInstalarAberto(true)}
-              className="text-primary hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+              className="text-primary hover:underline font-medium inline-flex items-center gap-1 cursor-pointer py-1 px-2 rounded-md hover:bg-primary/10 transition-colors"
             >
               <DownloadSimple size={13} weight="bold" />
               <span>Instalar como Aplicativo (PWA)</span>
