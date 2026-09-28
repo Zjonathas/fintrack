@@ -2,7 +2,7 @@ import uuid
 from calendar import monthrange
 from datetime import date, timedelta
 from typing import List, Optional
-from sqlalchemy import func, inspect, text
+from sqlalchemy import case, func, inspect, text
 from sqlalchemy.orm import Session, joinedload
 
 from . import models, schemas
@@ -625,6 +625,40 @@ def toggle_recorrencia(db: Session, recorrencia_id: int, usuario_id: int) -> Opt
 # Resumo Analitico e Dashboard (Isolado)
 # ==========================================
 
+def _calcular_saldo_acumulado(
+    db: Session,
+    usuario_id: int,
+    data_limite: Optional[date] = None,
+    estrito_menor: bool = False
+) -> float:
+    """Calcula o saldo acumulado (receitas - despesas incluindo frete) de um usuário até uma data limite."""
+    expr_valor_entrega = case(
+        (
+            (models.Transacao.teve_entrega == True) & (models.Transacao.valor_entrega.isnot(None)),
+            models.Transacao.valor_entrega
+        ),
+        else_=0.0
+    )
+
+    expr_delta = case(
+        (models.Transacao.tipo == 'receita', models.Transacao.valor_produto),
+        else_=-(models.Transacao.valor_produto + expr_valor_entrega)
+    )
+
+    query = db.query(func.coalesce(func.sum(expr_delta), 0.0)).filter(
+        models.Transacao.usuario_id == usuario_id
+    )
+
+    if data_limite is not None:
+        if estrito_menor:
+            query = query.filter(models.Transacao.data < data_limite)
+        else:
+            query = query.filter(models.Transacao.data <= data_limite)
+
+    resultado = query.scalar()
+    return round(float(resultado or 0.0), 2)
+
+
 def get_resumo_analitico(
     db: Session,
     usuario_id: int,
@@ -663,7 +697,27 @@ def get_resumo_analitico(
     total_receitas = round(total_receitas, 2)
     total_despesas = round(total_produtos + total_entregas, 2)
     total_geral = round(total_produtos + total_entregas, 2)
-    saldo_liquido = round(total_receitas - total_despesas, 2)
+    saldo_periodo = round(total_receitas - total_despesas, 2)
+    saldo_liquido = saldo_periodo
+
+    # Saldo anterior (acumulado de todas as transações com data < data_inicio)
+    saldo_anterior = 0.0
+    if data_inicio is not None:
+        saldo_anterior = _calcular_saldo_acumulado(
+            db=db,
+            usuario_id=usuario_id,
+            data_limite=data_inicio,
+            estrito_menor=True
+        )
+
+    # Saldo em Conta Contínuo acumulado até o final do período selecionado
+    saldo_em_conta = round(saldo_anterior + saldo_periodo, 2)
+
+    # Saldo Atual Geral da conta (todo o histórico do usuário)
+    if data_inicio is None and data_fim is None:
+        saldo_atual = saldo_em_conta
+    else:
+        saldo_atual = _calcular_saldo_acumulado(db=db, usuario_id=usuario_id)
 
     percentual_entregas = round((total_entregas / total_geral * 100), 2) if total_geral > 0 else 0.0
     media_valor_entrega = round((total_entregas / qtd_com_entrega), 2) if qtd_com_entrega > 0 else 0.0
@@ -718,6 +772,10 @@ def get_resumo_analitico(
         total_receitas=total_receitas,
         total_despesas=total_despesas,
         saldo_liquido=saldo_liquido,
+        saldo_anterior=saldo_anterior,
+        saldo_periodo=saldo_periodo,
+        saldo_em_conta=saldo_em_conta,
+        saldo_atual=saldo_atual,
         gastos_por_categoria=gastos_por_categoria,
     )
 

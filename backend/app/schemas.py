@@ -277,10 +277,14 @@ class ResumoAnalitico(BaseModel):
     qtd_transacoes: int
     qtd_com_entrega: int
     qtd_sem_entrega: int
-    # Novos campos de fluxo de caixa
+    # Novos campos de fluxo de caixa e saldo continuo
     total_receitas: float
     total_despesas: float
     saldo_liquido: float
+    saldo_anterior: float = 0.0
+    saldo_periodo: float = 0.0
+    saldo_em_conta: float = 0.0
+    saldo_atual: float = 0.0
     gastos_por_categoria: List[GastoPorCategoria]
 
 

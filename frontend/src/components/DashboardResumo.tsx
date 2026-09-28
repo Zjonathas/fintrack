@@ -11,6 +11,7 @@ import {
   CalendarBlank,
   CaretLeft,
   CaretRight,
+  Wallet,
 } from '@phosphor-icons/react';
 import {
   ResponsiveContainer,
@@ -280,18 +281,37 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
     total_receitas = 0,
     total_despesas = total_geral,
     saldo_liquido = 0,
+    saldo_anterior = 0,
+    saldo_periodo = saldo_liquido,
+    saldo_em_conta = (saldo_anterior + saldo_periodo),
+    saldo_atual = saldo_em_conta,
   } = resumo;
 
   const percProdutos = total_geral > 0 ? ((total_produtos / total_geral) * 100).toFixed(1) : '100';
 
   const kpis = [
     {
-      label: 'Saldo Líquido',
-      value: formatBRL(saldo_liquido),
-      detail: saldo_liquido >= 0 ? 'Superávit no período' : 'Déficit no período',
-      icon: saldo_liquido >= 0 ? <ArrowCircleUp size={20} className="text-emerald-500" weight="duotone" /> : <ArrowCircleDown size={20} className="text-rose-500" weight="duotone" />,
-      border: saldo_liquido >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30',
-      valueClass: saldo_liquido >= 0 ? 'text-emerald-500' : 'text-rose-500',
+      label: 'Saldo em Conta',
+      value: formatBRL(saldo_em_conta),
+      detail:
+        saldo_anterior !== 0
+          ? `Ant.: ${formatBRL(saldo_anterior)} · Mês: ${saldo_periodo >= 0 ? '+' : ''}${formatBRL(saldo_periodo)}`
+          : (saldo_em_conta >= 0 ? 'Saldo acumulado positivo' : 'Saldo acumulado negativo'),
+      icon: <Wallet size={20} className={saldo_em_conta >= 0 ? 'text-emerald-500' : 'text-rose-500'} weight="duotone" />,
+      border: saldo_em_conta >= 0 ? 'border-emerald-500/30' : 'border-rose-500/30',
+      valueClass: saldo_em_conta >= 0 ? 'text-emerald-500' : 'text-rose-500',
+      badge: 'Contínuo',
+      destaque: true,
+      tooltip: `Saldo em conta contínuo acumulado até o fim do período. Saldo atual hoje: ${formatBRL(saldo_atual)}`,
+    },
+    {
+      label: 'Resultado do Período',
+      value: formatBRL(saldo_periodo),
+      detail: saldo_periodo >= 0 ? 'Superávit no período' : 'Déficit no período',
+      icon: saldo_periodo >= 0 ? <ArrowCircleUp size={20} className="text-emerald-500" weight="duotone" /> : <ArrowCircleDown size={20} className="text-rose-500" weight="duotone" />,
+      border: saldo_periodo >= 0 ? 'border-emerald-500/20' : 'border-rose-500/20',
+      valueClass: saldo_periodo >= 0 ? 'text-emerald-500' : 'text-rose-500',
+      tooltip: 'Diferença líquida entre receitas e despesas registradas especificamente neste período.',
     },
     {
       label: 'Total Receitas',
@@ -300,6 +320,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       icon: <ArrowCircleUp size={20} className="text-emerald-500" weight="duotone" />,
       border: 'border-emerald-500/20',
       valueClass: 'text-emerald-500',
+      tooltip: 'Total de receitas e entradas no período selecionado.',
     },
     {
       label: 'Total Despesas',
@@ -308,6 +329,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       icon: <ArrowCircleDown size={20} className="text-rose-500" weight="duotone" />,
       border: 'border-rose-500/20',
       valueClass: 'text-rose-500',
+      tooltip: 'Total de produtos somado às taxas de entrega no período selecionado.',
     },
     {
       label: 'Taxas de Entrega',
@@ -316,6 +338,7 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       icon: <Truck size={20} className="text-warning" weight="duotone" />,
       border: 'border-warning/30',
       valueClass: 'text-foreground',
+      tooltip: 'Peso e impacto logístico isolado das entregas sobre o orçamento.',
     },
   ];
 
@@ -558,23 +581,33 @@ export const DashboardResumo: React.FC<DashboardResumoProps> = ({
       </div>
 
       {/* KPI Cards Estruturados com Tipografia Fluida */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {kpis.map((kpi) => (
           <div
             key={kpi.label}
-            className={`card p-3 sm:p-4 space-y-1 sm:space-y-2 border transition-all duration-200 hover:shadow-sm ${kpi.border}`}
+            className={`card p-3 sm:p-4 space-y-1 sm:space-y-2 border transition-all duration-200 hover:shadow-sm ${kpi.border} ${
+              kpi.destaque ? 'col-span-2 sm:col-span-1 bg-gradient-to-br from-card via-card to-primary/5' : ''
+            }`}
+            title={kpi.tooltip || kpi.value}
           >
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground tracking-wide uppercase truncate">
-                {kpi.label}
-              </span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground tracking-wide uppercase truncate">
+                  {kpi.label}
+                </span>
+                {kpi.badge && (
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-primary/15 text-primary tracking-wider shrink-0">
+                    {kpi.badge}
+                  </span>
+                )}
+              </div>
               <div className="p-1 sm:p-1.5 rounded-md bg-secondary/80 shrink-0">{kpi.icon}</div>
             </div>
             <div>
               <p className={`text-base sm:text-2xl font-bold tabular-nums truncate ${kpi.valueClass || 'text-foreground'}`} title={kpi.value}>
                 {kpi.value}
               </p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate">{kpi.detail}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 truncate" title={kpi.detail}>{kpi.detail}</p>
             </div>
           </div>
         ))}
