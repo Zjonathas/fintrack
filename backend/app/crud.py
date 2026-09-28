@@ -2,7 +2,7 @@ import uuid
 from calendar import monthrange
 from datetime import date, timedelta
 from typing import List, Optional
-from sqlalchemy import func, inspect, text
+from sqlalchemy import case, func, inspect, text
 from sqlalchemy.orm import Session, joinedload
 
 from . import models, schemas
@@ -408,6 +408,8 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
     if transacao.forma_pagamento == 'credito' and transacao.cartao_id and total_parcelas > 1:
         # Compra parcelada: distribui o valor entre as parcelas
         cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
+        if not cartao:
+            raise ValueError(f"Cartão de crédito com ID {transacao.cartao_id} não encontrado para este usuário.")
         grupo_id = str(uuid.uuid4())
         valor_base = round(transacao.valor_produto / total_parcelas, 2)
         valor_ultima = round(transacao.valor_produto - (valor_base * (total_parcelas - 1)), 2)
@@ -435,7 +437,7 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
                 usuario_id=usuario_id,
                 tipo=transacao.tipo,
                 forma_pagamento=transacao.forma_pagamento,
-                cartao_id=transacao.cartao_id,
+                cartao_id=cartao.id,
                 parcela_atual=i,
                 total_parcelas=total_parcelas,
                 compra_parcelada_id=grupo_id,
@@ -451,10 +453,13 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
     else:
         # Transacao simples (avista ou qualquer outra forma)
         data_final = transacao.data
-        if transacao.forma_pagamento == 'credito' and transacao.cartao_id:
+        cartao_id_final = None
+        if transacao.tipo != 'receita' and transacao.forma_pagamento == 'credito' and transacao.cartao_id:
             cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
-            if cartao:
-                data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
+            if not cartao:
+                raise ValueError(f"Cartão de crédito com ID {transacao.cartao_id} não encontrado para este usuário.")
+            cartao_id_final = cartao.id
+            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
 
         db_transacao = models.Transacao(
             descricao=transacao.descricao.strip(),
@@ -466,7 +471,7 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
             usuario_id=usuario_id,
             tipo=transacao.tipo,
             forma_pagamento=transacao.forma_pagamento,
-            cartao_id=None if transacao.tipo == 'receita' else (transacao.cartao_id if transacao.forma_pagamento == 'credito' else None),
+            cartao_id=cartao_id_final,
             parcela_atual=1,
             total_parcelas=1,
         )
@@ -499,20 +504,25 @@ def update_transacao(db: Session, transacao_id: int, transacao: schemas.Transaca
     if not db_transacao:
         return None
 
+    data_final = transacao.data
+    cartao_id_final = None
+    if transacao.tipo != 'receita' and transacao.forma_pagamento == 'credito' and transacao.cartao_id:
+        cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
+        if not cartao:
+            raise ValueError(f"Cartão de crédito com ID {transacao.cartao_id} não encontrado para este usuário.")
+        cartao_id_final = cartao.id
+        if (db_transacao.total_parcelas or 1) <= 1:
+            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
+
     db_transacao.descricao = transacao.descricao.strip()
     db_transacao.valor_produto = round(transacao.valor_produto, 2)
     db_transacao.teve_entrega = False if transacao.tipo == 'receita' else transacao.teve_entrega
     db_transacao.valor_entrega = 0.0 if transacao.tipo == 'receita' else (round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0)
-    data_final = transacao.data
-    if transacao.forma_pagamento == 'credito' and db_transacao.cartao_id and (db_transacao.total_parcelas or 1) <= 1:
-        cartao = get_cartao_by_id(db, db_transacao.cartao_id, usuario_id)
-        if cartao:
-            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
     db_transacao.data = data_final
     db_transacao.categoria_id = None if transacao.tipo == 'receita' else transacao.categoria_id
     db_transacao.tipo = transacao.tipo
     db_transacao.forma_pagamento = transacao.forma_pagamento
-    db_transacao.cartao_id = None if transacao.tipo == 'receita' else (transacao.cartao_id if transacao.forma_pagamento == 'credito' else None)
+    db_transacao.cartao_id = cartao_id_final
 
     db.commit()
     db.refresh(db_transacao)
@@ -625,6 +635,40 @@ def toggle_recorrencia(db: Session, recorrencia_id: int, usuario_id: int) -> Opt
 # Resumo Analitico e Dashboard (Isolado)
 # ==========================================
 
+def _calcular_saldo_acumulado(
+    db: Session,
+    usuario_id: int,
+    data_limite: Optional[date] = None,
+    estrito_menor: bool = False
+) -> float:
+    """Calcula o saldo acumulado (receitas - despesas incluindo frete) de um usuário até uma data limite."""
+    expr_valor_entrega = case(
+        (
+            (models.Transacao.teve_entrega == True) & (models.Transacao.valor_entrega.isnot(None)),
+            models.Transacao.valor_entrega
+        ),
+        else_=0.0
+    )
+
+    expr_delta = case(
+        (models.Transacao.tipo == 'receita', models.Transacao.valor_produto),
+        else_=-(models.Transacao.valor_produto + expr_valor_entrega)
+    )
+
+    query = db.query(func.coalesce(func.sum(expr_delta), 0.0)).filter(
+        models.Transacao.usuario_id == usuario_id
+    )
+
+    if data_limite is not None:
+        if estrito_menor:
+            query = query.filter(models.Transacao.data < data_limite)
+        else:
+            query = query.filter(models.Transacao.data <= data_limite)
+
+    resultado = query.scalar()
+    return round(float(resultado or 0.0), 2)
+
+
 def get_resumo_analitico(
     db: Session,
     usuario_id: int,
@@ -663,7 +707,27 @@ def get_resumo_analitico(
     total_receitas = round(total_receitas, 2)
     total_despesas = round(total_produtos + total_entregas, 2)
     total_geral = round(total_produtos + total_entregas, 2)
-    saldo_liquido = round(total_receitas - total_despesas, 2)
+    saldo_periodo = round(total_receitas - total_despesas, 2)
+    saldo_liquido = saldo_periodo
+
+    # Saldo anterior (acumulado de todas as transações com data < data_inicio)
+    saldo_anterior = 0.0
+    if data_inicio is not None:
+        saldo_anterior = _calcular_saldo_acumulado(
+            db=db,
+            usuario_id=usuario_id,
+            data_limite=data_inicio,
+            estrito_menor=True
+        )
+
+    # Saldo em Conta Contínuo acumulado até o final do período selecionado
+    saldo_em_conta = round(saldo_anterior + saldo_periodo, 2)
+
+    # Saldo Atual Geral da conta (todo o histórico do usuário)
+    if data_inicio is None and data_fim is None:
+        saldo_atual = saldo_em_conta
+    else:
+        saldo_atual = _calcular_saldo_acumulado(db=db, usuario_id=usuario_id)
 
     percentual_entregas = round((total_entregas / total_geral * 100), 2) if total_geral > 0 else 0.0
     media_valor_entrega = round((total_entregas / qtd_com_entrega), 2) if qtd_com_entrega > 0 else 0.0
@@ -718,6 +782,10 @@ def get_resumo_analitico(
         total_receitas=total_receitas,
         total_despesas=total_despesas,
         saldo_liquido=saldo_liquido,
+        saldo_anterior=saldo_anterior,
+        saldo_periodo=saldo_periodo,
+        saldo_em_conta=saldo_em_conta,
+        saldo_atual=saldo_atual,
         gastos_por_categoria=gastos_por_categoria,
     )
 

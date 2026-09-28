@@ -129,6 +129,10 @@ export interface ResumoAnalitico {
   total_receitas: number;
   total_despesas: number;
   saldo_liquido: number;
+  saldo_anterior?: number;
+  saldo_periodo?: number;
+  saldo_em_conta?: number;
+  saldo_atual?: number;
   gastos_por_categoria: GastoPorCategoria[];
 }
 

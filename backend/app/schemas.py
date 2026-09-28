@@ -58,6 +58,14 @@ class TokenResponse(BaseModel):
 class CategoriaBase(BaseModel):
     nome: str = Field(..., min_length=1, max_length=100, description='Nome da categoria')
 
+    @field_validator('nome')
+    @classmethod
+    def validar_nome_categoria(cls, v: str) -> str:
+        v_limpo = v.strip()
+        if not v_limpo:
+            raise ValueError('O nome da categoria não pode ser vazio ou conter apenas espaços.')
+        return v_limpo
+
 
 class CategoriaCreate(CategoriaBase):
     pass
@@ -80,6 +88,14 @@ class CartaoCreditoBase(BaseModel):
     dia_vencimento: int = Field(..., ge=1, le=31, description='Dia do mes em que a fatura vence')
     cor: Optional[str] = Field(default='#6366F1', max_length=20, description='Cor tematica do cartao (hex)')
 
+    @field_validator('nome')
+    @classmethod
+    def validar_nome_cartao(cls, v: str) -> str:
+        v_limpo = v.strip()
+        if not v_limpo:
+            raise ValueError('O nome do cartão não pode ser vazio ou conter apenas espaços.')
+        return v_limpo
+
 
 class CartaoCreditoCreate(CartaoCreditoBase):
     pass
@@ -92,6 +108,16 @@ class CartaoCreditoUpdate(BaseModel):
     dia_fechamento: Optional[int] = Field(None, ge=1, le=31)
     dia_vencimento: Optional[int] = Field(None, ge=1, le=31)
     cor: Optional[str] = Field(None, max_length=20)
+
+    @field_validator('nome')
+    @classmethod
+    def validar_nome_cartao_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v_limpo = v.strip()
+            if not v_limpo:
+                raise ValueError('O nome do cartão não pode ser vazio ou conter apenas espaços.')
+            return v_limpo
+        return v
 
 
 class CartaoCreditoResponse(CartaoCreditoBase):
@@ -277,10 +303,14 @@ class ResumoAnalitico(BaseModel):
     qtd_transacoes: int
     qtd_com_entrega: int
     qtd_sem_entrega: int
-    # Novos campos de fluxo de caixa
+    # Novos campos de fluxo de caixa e saldo continuo
     total_receitas: float
     total_despesas: float
     saldo_liquido: float
+    saldo_anterior: float = 0.0
+    saldo_periodo: float = 0.0
+    saldo_em_conta: float = 0.0
+    saldo_atual: float = 0.0
     gastos_por_categoria: List[GastoPorCategoria]
 
 

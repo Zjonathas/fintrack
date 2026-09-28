@@ -11,10 +11,17 @@ from sqlalchemy.orm import Session
 from . import crud, models
 from .database import get_db
 
+import logging
+
+logger = logging.getLogger("uvicorn.error")
+
 # Configurações de segurança JWT
 SECRET_KEY = os.getenv("SECRET_KEY", "fintrack_super_secret_jwt_key_2026_financas_app_secure_key_32bytes")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 horas
+
+if SECRET_KEY == "fintrack_super_secret_jwt_key_2026_financas_app_secure_key_32bytes":
+    logger.warning("ALERTA DE SEGURANÇA: Usando SECRET_KEY padrão para JWT. Em ambiente produtivo, defina uma chave forte na variável de ambiente SECRET_KEY!")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 

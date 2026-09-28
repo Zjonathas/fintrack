@@ -345,17 +345,199 @@ def test_dashboard_resumo_filtro_periodo(client: TestClient):
     # 1. Sem filtro: deve somar R$ 7000
     resp_total = client.get("/api/dashboard/resumo", headers=headers)
     assert resp_total.status_code == 200
-    assert resp_total.json()["total_receitas"] == 7000.0
+    dados_total = resp_total.json()
+    assert dados_total["total_receitas"] == 7000.0
+    assert dados_total["saldo_anterior"] == 0.0
+    assert dados_total["saldo_periodo"] == 7000.0
+    assert dados_total["saldo_em_conta"] == 7000.0
+    assert dados_total["saldo_atual"] == 7000.0
 
-    # 2. Filtrando apenas Março: deve trazer apenas R$ 3000
+    # 2. Filtrando apenas Março: deve trazer R$ 3000 no período e saldo contínuo R$ 3000
     resp_marco = client.get("/api/dashboard/resumo?data_inicio=2026-03-01&data_fim=2026-03-31", headers=headers)
     assert resp_marco.status_code == 200
-    assert resp_marco.json()["total_receitas"] == 3000.0
+    dados_marco = resp_marco.json()
+    assert dados_marco["total_receitas"] == 3000.0
+    assert dados_marco["saldo_anterior"] == 0.0
+    assert dados_marco["saldo_periodo"] == 3000.0
+    assert dados_marco["saldo_em_conta"] == 3000.0
+    assert dados_marco["saldo_atual"] == 7000.0
 
-    # 3. Filtrando apenas Abril: deve trazer apenas R$ 4000
+    # 3. Filtrando apenas Abril: saldo anterior R$ 3000 de março, período R$ 4000, saldo em conta R$ 7000
     resp_abril = client.get("/api/dashboard/resumo?data_inicio=2026-04-01&data_fim=2026-04-30", headers=headers)
     assert resp_abril.status_code == 200
-    assert resp_abril.json()["total_receitas"] == 4000.0
+    dados_abril = resp_abril.json()
+    assert dados_abril["total_receitas"] == 4000.0
+    assert dados_abril["saldo_anterior"] == 3000.0
+    assert dados_abril["saldo_periodo"] == 4000.0
+    assert dados_abril["saldo_em_conta"] == 7000.0
+    assert dados_abril["saldo_atual"] == 7000.0
+
+
+def test_saldo_em_conta_continuo_com_despesas_e_frete(client: TestClient):
+    """Valida o conceito de Saldo em Conta Contínuo ao longo de múltiplos meses com receitas, despesas e taxas de entrega."""
+    headers_a = get_authenticated_header(client, "saldo_continuo_a@example.com")
+    headers_b = get_authenticated_header(client, "saldo_continuo_b@example.com")
+
+    # Usuário A - Mês 1 (Janeiro/2026):
+    # Receita R$ 5.000,00
+    # Despesa R$ 1.500,00 + R$ 50,00 frete = R$ 1.550,00
+    # Resultado Jan: R$ 3.450,00. Saldo em conta ao fim de Jan: R$ 3.450,00
+    resp_rec1 = client.post(
+        "/api/transacoes",
+        headers=headers_a,
+        json={"tipo": "receita", "descricao": "Salário Jan", "valor_produto": 5000.0, "data": "2026-01-05"}
+    )
+    assert resp_rec1.status_code == 201
+
+    resp_desp1 = client.post(
+        "/api/transacoes",
+        headers=headers_a,
+        json={"tipo": "despesa", "categoria_id": 1, "descricao": "Compras Jan", "valor_produto": 1500.0, "teve_entrega": True, "valor_entrega": 50.0, "data": "2026-01-15"}
+    )
+    assert resp_desp1.status_code == 201
+
+    # Usuário A - Mês 2 (Fevereiro/2026):
+    # Sem receitas
+    # Despesa R$ 800,00 (sem frete)
+    # Resultado Fev: -R$ 800,00.
+    # Saldo anterior (Jan): R$ 3.450,00
+    # Saldo em conta ao fim de Fev: R$ 2.650,00 (3450 - 800)
+    resp_desp2 = client.post(
+        "/api/transacoes",
+        headers=headers_a,
+        json={"tipo": "despesa", "categoria_id": 1, "descricao": "Aluguel Fev", "valor_produto": 800.0, "data": "2026-02-10"}
+    )
+    assert resp_desp2.status_code == 201
+
+    # Usuário B - Dados para testar isolamento multi-tenant
+    client.post(
+        "/api/transacoes",
+        headers=headers_b,
+        json={"tipo": "receita", "descricao": "Salário Usuário B", "valor_produto": 10000.0, "data": "2026-01-01"}
+    )
+
+    # Consultar Mês 1 (Janeiro/2026) do Usuário A
+    res_jan = client.get("/api/dashboard/resumo?data_inicio=2026-01-01&data_fim=2026-01-31", headers=headers_a).json()
+    assert res_jan["saldo_anterior"] == 0.0
+    assert res_jan["total_receitas"] == 5000.0
+    assert res_jan["total_despesas"] == 1550.0
+    assert res_jan["saldo_periodo"] == 3450.0
+    assert res_jan["saldo_em_conta"] == 3450.0
+    assert res_jan["saldo_atual"] == 2650.0
+
+    # Consultar Mês 2 (Fevereiro/2026) do Usuário A: Saldo contínuo NÃO zera, transita o saldo anterior!
+    res_fev = client.get("/api/dashboard/resumo?data_inicio=2026-02-01&data_fim=2026-02-28", headers=headers_a).json()
+    assert res_fev["saldo_anterior"] == 3450.0
+    assert res_fev["total_receitas"] == 0.0
+    assert res_fev["total_despesas"] == 800.0
+    assert res_fev["saldo_periodo"] == -800.0
+    assert res_fev["saldo_liquido"] == -800.0
+    assert res_fev["saldo_em_conta"] == 2650.0
+    assert res_fev["saldo_atual"] == 2650.0
+
+    # Consultar Usuário B em Fevereiro: isolamento estrito, saldo anterior e atual de B não se misturam com A
+    res_b_fev = client.get("/api/dashboard/resumo?data_inicio=2026-02-01&data_fim=2026-02-28", headers=headers_b).json()
+    assert res_b_fev["saldo_anterior"] == 10000.0
+    assert res_b_fev["saldo_periodo"] == 0.0
+    assert res_b_fev["saldo_em_conta"] == 10000.0
+    assert res_b_fev["saldo_atual"] == 10000.0
+
+
+def test_cartao_credito_idor_prevention(client: TestClient):
+    """Garante que um usuário não consiga vincular transações ao cartão de crédito de outro usuário (IDOR)."""
+    headers_user1 = get_authenticated_header(client, "idor_user1@example.com", "User 1")
+    headers_user2 = get_authenticated_header(client, "idor_user2@example.com", "User 2")
+
+    # User 2 cria seu próprio cartão
+    cartao_user2 = client.post(
+        "/api/cartoes",
+        headers=headers_user2,
+        json={"nome": "Cartão Privado User 2", "limite": 8000.0, "dia_fechamento": 15, "dia_vencimento": 22}
+    ).json()
+    cartao_user2_id = cartao_user2["id"]
+
+    # User 1 cria um cartão próprio
+    cartao_user1 = client.post(
+        "/api/cartoes",
+        headers=headers_user1,
+        json={"nome": "Cartão User 1", "limite": 3000.0, "dia_fechamento": 5, "dia_vencimento": 12}
+    ).json()
+    cartao_user1_id = cartao_user1["id"]
+
+    # 1. User 1 tenta criar transação avista no cartão do User 2 -> Deve falhar com 404
+    resp_create_idor = client.post(
+        "/api/transacoes",
+        headers=headers_user1,
+        json={
+            "descricao": "Tentativa IDOR Avista",
+            "valor_produto": 150.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user2_id,
+            "total_parcelas": 1
+        }
+    )
+    assert resp_create_idor.status_code == 404
+    assert "não encontrado ou não pertence a este usuário" in resp_create_idor.json()["detail"]
+
+    # 2. User 1 tenta criar transação parcelada no cartão do User 2 -> Deve falhar com 404
+    resp_create_idor_parcelado = client.post(
+        "/api/transacoes",
+        headers=headers_user1,
+        json={
+            "descricao": "Tentativa IDOR Parcelado",
+            "valor_produto": 300.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user2_id,
+            "total_parcelas": 3
+        }
+    )
+    assert resp_create_idor_parcelado.status_code == 404
+    assert "não encontrado ou não pertence a este usuário" in resp_create_idor_parcelado.json()["detail"]
+
+    # 3. User 1 cria transação válida no seu próprio cartão
+    resp_valid = client.post(
+        "/api/transacoes",
+        headers=headers_user1,
+        json={
+            "descricao": "Compra Válida User 1",
+            "valor_produto": 100.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user1_id,
+            "total_parcelas": 1
+        }
+    )
+    assert resp_valid.status_code == 201
+    transacao_id = resp_valid.json()["id"]
+
+    # 4. User 1 tenta atualizar a transação para apontar para o cartão do User 2 -> Deve falhar com 404
+    resp_update_idor = client.put(
+        f"/api/transacoes/{transacao_id}",
+        headers=headers_user1,
+        json={
+            "descricao": "Tentativa Update IDOR",
+            "valor_produto": 100.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user2_id,
+            "total_parcelas": 1
+        }
+    )
+    assert resp_update_idor.status_code == 404
+    assert "não encontrado ou não pertence a este usuário" in resp_update_idor.json()["detail"]
+
+
+def test_security_headers_owasp(client: TestClient):
+    """Valida a presença dos cabeçalhos defensivos de segurança (OWASP Hardening) nas respostas."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert resp.headers.get("X-Frame-Options") == "DENY"
+    assert resp.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+    assert resp.headers.get("X-XSS-Protection") == "1; mode=block"
+
 
 
 
