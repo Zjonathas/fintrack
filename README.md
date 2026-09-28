@@ -37,17 +37,26 @@ O **FinançasApp** foi concebido para transformar a organização financeira em 
 
 ### 📊 Dashboards & Métricas Financeiras
 - **Navegador Mensal com Setas (`< Mês Ano >`)**: Avanço e retrocesso de meses em 1 toque, com retorno rápido ao mês corrente e atalhos rápidos (*Este Mês*, *30 Dias*, *Este Ano*, *Tudo*, *Personalizado*).
-- **Cards de KPIs Analíticos**: Tipografia fluida que exibe Gastos Totais, Receitas, Saldo Líquido e Percentual de Frete sem quebra de valores em telas compactas.
+- **Conceito de Saldo em Conta Contínuo**:
+  - **Saldo em Conta**: Exibe o saldo acumulado real da conta até o período selecionado. Não "zera" na virada do mês, carregando o saldo herdado de períodos anteriores.
+  - **Resultado do Período**: Apresenta de forma independente o superávit ou déficit estrito das movimentações realizadas no mês/filtro ativo.
+  - **Saldo Anterior**: Histórico consolidado herdado de períodos anteriores (`data < data_inicio`).
+  - **Saldo Atual Geral**: Saldo total em tempo real da conta considerando todo o histórico cadastrado.
+- **Cards de KPIs Analíticos**: Tipografia fluida em grid responsivo com 5 métricas essenciais (Saldo em Conta Contínuo, Resultado do Período, Total de Receitas, Despesas Totais e Impacto de Entregas).
 - **Gráficos Interativos (Recharts)**:
   - *Distribuição por Categoria*: Gráfico Donut detalhando os maiores centros de custo.
   - *Evolução Histórica*: Curva diária de fluxo financeiro.
   - *Produto vs. Frete*: Comparativo visual entre despesas reais e custos de entrega.
 
 ### 🔐 Segurança, Autenticação & Multi-tenant
-- Cadastro e login seguros com validação de e-mail e hash de senhas via `bcrypt`.
-- Autenticação stateless via **JSON Web Tokens (JWT)** no padrão Bearer Token.
-- **Isolamento Completo (Multi-tenant)**: Consultas e manipulações de banco de dados são estritamente filtradas pelo ID do usuário autenticado (`usuario_id = current_user.id`).
-- **Proteção contra Força Bruta**: Rate limiting integrado para mitigar tentativas excessivas de requisições.
+- **Cadastro e Login Criptografados**: Validação de e-mail e hash de senhas via `bcrypt` com política estrita de complexidade (mínimo de 8 caracteres, maiúscula, minúscula, número e caractere especial).
+- **Autenticação Stateless JWT**: Assinatura e decodificação via **JSON Web Tokens (JWT)** no padrão Bearer Token, com aviso proativo em logs para troca de chave secreta em ambientes de produção.
+- **Isolamento Multi-tenant & Prevenção Rigorosa Anti-IDOR**:
+  - Toda consulta, exclusão ou mutação de dados é restrita ao `usuario_id = current_user.id`.
+  - Associação cruzada bloqueada: a API valida estritamente a posse de recursos correlacionados (como `cartao_id` em transações de crédito), rejeitando tentativas de IDOR com `404 Not Found`.
+- **Cabeçalhos de Segurança HTTP (OWASP Hardening)**: Middleware nativo injetando `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-XSS-Protection: 1; mode=block` e HSTS (`Strict-Transport-Security`) em conexões HTTPS.
+- **Proteção contra Força Bruta & Abusos**: Rate limiting por IP via SlowAPI protegendo rotas sensíveis de autenticação (`/api/auth/*`) e exclusão em lote (`/api/transacoes/bulk-delete`).
+- **Sanitização de Entradas**: Bloqueio de campos vazios ou preenchidos apenas com espaços em branco em categorias e cartões via validadores Pydantic v2.
 
 ### 🎨 Design System & Acessibilidade
 - **Modo Escuro e Claro (Dark/Light Mode)**: Alternância suave com detecção de preferência do sistema operacional e persistência local.
@@ -198,10 +207,10 @@ O frontend estará disponível em `http://localhost:5173`.
 
 ## 🧪 Testes Automatizados
 
-O backend possui cobertura de testes de integração automatizados que validam segurança, autenticação, controle de limites de cartões, cálculo de parcelas e regras de rate limiting:
+O backend possui cobertura de testes de integração automatizados que validam segurança, autenticação, isolamento multi-tenant, prevenção contra IDOR em cartões, continuidade temporal de saldos entre meses, cabeçalhos de proteção OWASP, cálculo de parcelas e rate limiting:
 
 ```bash
-# Executar a suíte completa de testes (16 testes):
+# Executar a suíte completa de testes (19 testes):
 python -m pytest
 
 # Ou especificando o ambiente virtual:
@@ -220,15 +229,15 @@ A documentação interativa e testável em tempo real está disponível em `/doc
 | **Auth** | `POST` | `/api/auth/login` | Login com geração de Bearer Token JWT |
 | **Auth** | `GET` | `/api/auth/me` | Dados do perfil do usuário conectado |
 | **Transações** | `GET` | `/api/transacoes` | Lista transações do usuário (filtros: período, busca, cartão, frete) |
-| **Transações** | `POST` | `/api/transacoes` | Cadastra transação (com frete e parcelamento opcional) |
-| **Transações** | `PUT` | `/api/transacoes/{id}` | Atualiza transação existente |
+| **Transações** | `POST` | `/api/transacoes` | Cadastra transação (com frete e parcelamento opcional; validação anti-IDOR) |
+| **Transações** | `PUT` | `/api/transacoes/{id}` | Atualiza transação existente com validação anti-IDOR |
 | **Transações** | `DELETE` | `/api/transacoes/{id}` | Exclui transação individual |
 | **Transações** | `POST` | `/api/transacoes/bulk-delete` | Exclusão atômica em massa por IDs |
 | **Cartões** | `GET` | `/api/cartoes` | Lista cartões de crédito e faturas do usuário |
 | **Cartões** | `POST` | `/api/cartoes` | Cadastra novo cartão de crédito |
 | **Recorrências** | `GET` | `/api/recorrencias` | Lista contas recorrentes ativas |
 | **Recorrências** | `POST` | `/api/recorrencias` | Cadastra despesa ou receita recorrente |
-| **Dashboard** | `GET` | `/api/dashboard/resumo` | KPIs agregados, fretes e distribuição por período |
+| **Dashboard** | `GET` | `/api/dashboard/resumo` | KPIs agregados, saldo contínuo, saldo anterior, resultado do período e categorias |
 | **Categorias** | `GET` | `/api/categorias` | Lista categorias cadastradas |
 | **Categorias** | `POST` | `/api/categorias` | Criação de nova categoria |
 

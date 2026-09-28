@@ -408,6 +408,8 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
     if transacao.forma_pagamento == 'credito' and transacao.cartao_id and total_parcelas > 1:
         # Compra parcelada: distribui o valor entre as parcelas
         cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
+        if not cartao:
+            raise ValueError(f"Cartão de crédito com ID {transacao.cartao_id} não encontrado para este usuário.")
         grupo_id = str(uuid.uuid4())
         valor_base = round(transacao.valor_produto / total_parcelas, 2)
         valor_ultima = round(transacao.valor_produto - (valor_base * (total_parcelas - 1)), 2)
@@ -435,7 +437,7 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
                 usuario_id=usuario_id,
                 tipo=transacao.tipo,
                 forma_pagamento=transacao.forma_pagamento,
-                cartao_id=transacao.cartao_id,
+                cartao_id=cartao.id,
                 parcela_atual=i,
                 total_parcelas=total_parcelas,
                 compra_parcelada_id=grupo_id,
@@ -451,10 +453,13 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
     else:
         # Transacao simples (avista ou qualquer outra forma)
         data_final = transacao.data
-        if transacao.forma_pagamento == 'credito' and transacao.cartao_id:
+        cartao_id_final = None
+        if transacao.tipo != 'receita' and transacao.forma_pagamento == 'credito' and transacao.cartao_id:
             cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
-            if cartao:
-                data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
+            if not cartao:
+                raise ValueError(f"Cartão de crédito com ID {transacao.cartao_id} não encontrado para este usuário.")
+            cartao_id_final = cartao.id
+            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
 
         db_transacao = models.Transacao(
             descricao=transacao.descricao.strip(),
@@ -466,7 +471,7 @@ def create_transacao(db: Session, transacao: schemas.TransacaoCreate, usuario_id
             usuario_id=usuario_id,
             tipo=transacao.tipo,
             forma_pagamento=transacao.forma_pagamento,
-            cartao_id=None if transacao.tipo == 'receita' else (transacao.cartao_id if transacao.forma_pagamento == 'credito' else None),
+            cartao_id=cartao_id_final,
             parcela_atual=1,
             total_parcelas=1,
         )
@@ -499,20 +504,25 @@ def update_transacao(db: Session, transacao_id: int, transacao: schemas.Transaca
     if not db_transacao:
         return None
 
+    data_final = transacao.data
+    cartao_id_final = None
+    if transacao.tipo != 'receita' and transacao.forma_pagamento == 'credito' and transacao.cartao_id:
+        cartao = get_cartao_by_id(db, transacao.cartao_id, usuario_id)
+        if not cartao:
+            raise ValueError(f"Cartão de crédito com ID {transacao.cartao_id} não encontrado para este usuário.")
+        cartao_id_final = cartao.id
+        if (db_transacao.total_parcelas or 1) <= 1:
+            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
+
     db_transacao.descricao = transacao.descricao.strip()
     db_transacao.valor_produto = round(transacao.valor_produto, 2)
     db_transacao.teve_entrega = False if transacao.tipo == 'receita' else transacao.teve_entrega
     db_transacao.valor_entrega = 0.0 if transacao.tipo == 'receita' else (round(transacao.valor_entrega or 0.0, 2) if transacao.teve_entrega else 0.0)
-    data_final = transacao.data
-    if transacao.forma_pagamento == 'credito' and db_transacao.cartao_id and (db_transacao.total_parcelas or 1) <= 1:
-        cartao = get_cartao_by_id(db, db_transacao.cartao_id, usuario_id)
-        if cartao:
-            data_final = _calcular_data_primeira_parcela(transacao.data, cartao)
     db_transacao.data = data_final
     db_transacao.categoria_id = None if transacao.tipo == 'receita' else transacao.categoria_id
     db_transacao.tipo = transacao.tipo
     db_transacao.forma_pagamento = transacao.forma_pagamento
-    db_transacao.cartao_id = None if transacao.tipo == 'receita' else (transacao.cartao_id if transacao.forma_pagamento == 'credito' else None)
+    db_transacao.cartao_id = cartao_id_final
 
     db.commit()
     db.refresh(db_transacao)

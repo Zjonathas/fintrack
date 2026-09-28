@@ -443,5 +443,101 @@ def test_saldo_em_conta_continuo_com_despesas_e_frete(client: TestClient):
     assert res_b_fev["saldo_atual"] == 10000.0
 
 
+def test_cartao_credito_idor_prevention(client: TestClient):
+    """Garante que um usuário não consiga vincular transações ao cartão de crédito de outro usuário (IDOR)."""
+    headers_user1 = get_authenticated_header(client, "idor_user1@example.com", "User 1")
+    headers_user2 = get_authenticated_header(client, "idor_user2@example.com", "User 2")
+
+    # User 2 cria seu próprio cartão
+    cartao_user2 = client.post(
+        "/api/cartoes",
+        headers=headers_user2,
+        json={"nome": "Cartão Privado User 2", "limite": 8000.0, "dia_fechamento": 15, "dia_vencimento": 22}
+    ).json()
+    cartao_user2_id = cartao_user2["id"]
+
+    # User 1 cria um cartão próprio
+    cartao_user1 = client.post(
+        "/api/cartoes",
+        headers=headers_user1,
+        json={"nome": "Cartão User 1", "limite": 3000.0, "dia_fechamento": 5, "dia_vencimento": 12}
+    ).json()
+    cartao_user1_id = cartao_user1["id"]
+
+    # 1. User 1 tenta criar transação avista no cartão do User 2 -> Deve falhar com 404
+    resp_create_idor = client.post(
+        "/api/transacoes",
+        headers=headers_user1,
+        json={
+            "descricao": "Tentativa IDOR Avista",
+            "valor_produto": 150.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user2_id,
+            "total_parcelas": 1
+        }
+    )
+    assert resp_create_idor.status_code == 404
+    assert "não encontrado ou não pertence a este usuário" in resp_create_idor.json()["detail"]
+
+    # 2. User 1 tenta criar transação parcelada no cartão do User 2 -> Deve falhar com 404
+    resp_create_idor_parcelado = client.post(
+        "/api/transacoes",
+        headers=headers_user1,
+        json={
+            "descricao": "Tentativa IDOR Parcelado",
+            "valor_produto": 300.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user2_id,
+            "total_parcelas": 3
+        }
+    )
+    assert resp_create_idor_parcelado.status_code == 404
+    assert "não encontrado ou não pertence a este usuário" in resp_create_idor_parcelado.json()["detail"]
+
+    # 3. User 1 cria transação válida no seu próprio cartão
+    resp_valid = client.post(
+        "/api/transacoes",
+        headers=headers_user1,
+        json={
+            "descricao": "Compra Válida User 1",
+            "valor_produto": 100.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user1_id,
+            "total_parcelas": 1
+        }
+    )
+    assert resp_valid.status_code == 201
+    transacao_id = resp_valid.json()["id"]
+
+    # 4. User 1 tenta atualizar a transação para apontar para o cartão do User 2 -> Deve falhar com 404
+    resp_update_idor = client.put(
+        f"/api/transacoes/{transacao_id}",
+        headers=headers_user1,
+        json={
+            "descricao": "Tentativa Update IDOR",
+            "valor_produto": 100.0,
+            "categoria_id": 1,
+            "forma_pagamento": "credito",
+            "cartao_id": cartao_user2_id,
+            "total_parcelas": 1
+        }
+    )
+    assert resp_update_idor.status_code == 404
+    assert "não encontrado ou não pertence a este usuário" in resp_update_idor.json()["detail"]
+
+
+def test_security_headers_owasp(client: TestClient):
+    """Valida a presença dos cabeçalhos defensivos de segurança (OWASP Hardening) nas respostas."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert resp.headers.get("X-Frame-Options") == "DENY"
+    assert resp.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+    assert resp.headers.get("X-XSS-Protection") == "1; mode=block"
+
+
 
 

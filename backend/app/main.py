@@ -87,6 +87,19 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Aplica cabeçalhos defensivos de segurança (OWASP Hardening)."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 @app.get("/", tags=["Health"])
 def health_check():
     return {
@@ -265,6 +278,16 @@ def registrar_transacao(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
             )
+
+    # Valida se o cartão de crédito existe e pertence ao usuário autenticado (prevenção de IDOR)
+    if transacao.forma_pagamento == "credito" and transacao.cartao_id is not None:
+        cartao = crud.get_cartao_by_id(db=db, cartao_id=transacao.cartao_id, usuario_id=current_user.id)
+        if not cartao:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Cartão de crédito com ID {transacao.cartao_id} não encontrado ou não pertence a este usuário."
+            )
+
     return crud.create_transacao(db=db, transacao=transacao, usuario_id=current_user.id)
 
 
@@ -308,6 +331,16 @@ def atualizar_transacao(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Categoria com ID {transacao.categoria_id} não encontrada."
             )
+
+    # Valida se o cartão de crédito existe e pertence ao usuário autenticado (prevenção de IDOR)
+    if transacao.forma_pagamento == "credito" and transacao.cartao_id is not None:
+        cartao = crud.get_cartao_by_id(db=db, cartao_id=transacao.cartao_id, usuario_id=current_user.id)
+        if not cartao:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Cartão de crédito com ID {transacao.cartao_id} não encontrado ou não pertence a este usuário."
+            )
+
     atualizado = crud.update_transacao(
         db=db,
         transacao_id=transacao_id,
